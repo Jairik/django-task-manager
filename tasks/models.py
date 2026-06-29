@@ -29,6 +29,8 @@ class Project(models.Model):
 
     name = models.CharField(max_length=255)
     due_date = models.DateField(null=True, blank=True)
+    # Earliest task due_date for this project; maintained by app logic, not DB triggers.
+    soonest_due_date = models.DateField(null=True, blank=True)
     priority = models.CharField(
         max_length=20,
         choices=Priority.choices,
@@ -45,10 +47,10 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Meta options: adds indexes to optimize queries on due_date and tags fields for Project.
     class Meta:
         indexes = [
             models.Index(fields=["due_date"], name="project_due_date_idx"),
+            models.Index(fields=["soonest_due_date"], name="project_soonest_due_date_idx"),
             GinIndex(fields=["tags"], name="project_tags_gin_idx"),
         ]
   
@@ -86,10 +88,10 @@ class Task(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Meta options: adds indexes to optimize queries on project and tags fields for Task.
     class Meta:
         indexes = [
             models.Index(fields=["project"], name="task_project_id_idx"),
+            models.Index(fields=["due_date"], name="task_due_date_idx"),
             GinIndex(fields=["tags"], name="task_tags_gin_idx"),
         ]
 

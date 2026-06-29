@@ -25,6 +25,7 @@ erDiagram
         bigint id PK
         varchar name
         date due_date
+        date soonest_due_date
         varchar priority
         text description
         varchar_array tags
@@ -93,8 +94,9 @@ Optional list of up to **3** short labels on both `project` and `task`.
 | ------------- | --------------- | ------------------------ |
 | `id`          | `BIGSERIAL`     | PK                       |
 | `name`        | `VARCHAR(255)`  | NOT NULL                 |
-| `due_date`    | `DATE`          | NULL allowed             |
-| `priority`    | `VARCHAR(20)`   | NOT NULL, default `low`  |
+| `due_date`          | `DATE`          | NULL allowed             |
+| `soonest_due_date`  | `DATE`          | NULL allowed             |
+| `priority`          | `VARCHAR(20)`   | NOT NULL, default `low`  |
 | `description` | `TEXT`          | NULL allowed             |
 | `tags`        | `VARCHAR(50)[]` | Max 3 elements           |
 | `created_at`  | `TIMESTAMPTZ`   | NOT NULL, auto on insert |
@@ -104,8 +106,9 @@ Optional list of up to **3** short labels on both `project` and `task`.
 
 | Index                  | Columns    | Type   | Purpose              |
 | ---------------------- | ---------- | ------ | -------------------- |
-| `project_due_date_idx` | `due_date` | B-tree | Due-date list filter |
-| `project_tags_gin_idx` | `tags`     | GIN    | Tag search / filter  |
+| `project_due_date_idx`         | `due_date`         | B-tree | Due-date list filter              |
+| `project_soonest_due_date_idx` | `soonest_due_date` | B-tree | Sort/filter by nearest task deadline |
+| `project_tags_gin_idx`         | `tags`             | GIN    | Tag search / filter               |
 
 
 ---
@@ -135,9 +138,19 @@ Optional list of up to **3** short labels on both `project` and `task`.
 
 | Index                 | Columns      | Type   | Purpose               |
 | --------------------- | ------------ | ------ | --------------------- |
-| `task_project_id_idx` | `project_id` | B-tree | Tasks for one project |
-| `task_tags_gin_idx`   | `tags`       | GIN    | Tag search / filter   |
+| `task_project_id_idx` | `project_id` | B-tree | Tasks for one project   |
+| `task_due_date_idx`   | `due_date`   | B-tree | Task due-date queries   |
+| `task_tags_gin_idx`   | `tags`       | GIN    | Tag search / filter     |
 
+
+### `soonest_due_date` (project)
+
+Denormalized copy of the earliest `due_date` among the project's tasks. Updated by application logic when tasks are created, edited, or deleted (not a database trigger).
+
+| Property | Value                                      |
+| -------- | ------------------------------------------ |
+| Type     | `DATE`                                     |
+| Empty    | `NULL` when the project has no dated tasks |
 
 ---
 
@@ -162,6 +175,7 @@ class TaskStatus(models.TextChoices):
 class Project(models.Model):
     name = models.CharField(max_length=255)
     due_date = models.DateField(null=True, blank=True)
+    soonest_due_date = models.DateField(null=True, blank=True)
     priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.LOW)
     description = models.TextField(blank=True)
     tags = ArrayField(models.CharField(max_length=50), size=3, default=list, blank=True)
@@ -171,6 +185,7 @@ class Project(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["due_date"], name="project_due_date_idx"),
+            models.Index(fields=["soonest_due_date"], name="project_soonest_due_date_idx"),
             GinIndex(fields=["tags"], name="project_tags_gin_idx"),
         ]
 
@@ -188,6 +203,7 @@ class Task(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["project_id"], name="task_project_id_idx"),
+            models.Index(fields=["due_date"], name="task_due_date_idx"),
             GinIndex(fields=["tags"], name="task_tags_gin_idx"),
         ]
 ```

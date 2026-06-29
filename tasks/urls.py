@@ -2,9 +2,9 @@
 
 from django.urls import path
 
-from . import views
+from tasks.views import home, project_create
 
 urlpatterns = [
-    # Landing page served at the site root.
-    path("", views.home, name="home"),
+    path("", home, name="home"),
+    path("projects/new/", project_create, name="project_create"),
 ]
