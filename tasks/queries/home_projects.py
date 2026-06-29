@@ -19,6 +19,7 @@ from django.db.models import (
 )
 
 from tasks.models import Project, Task, TaskStatus
+from tasks.queries.fuzzy_search import apply_fuzzy_search
 
 
 def _eligible_soonest_tasks_filter() -> Q:
@@ -32,20 +33,15 @@ def _eligible_soonest_tasks_filter() -> Q:
 def get_home_projects(search: str = "") -> QuerySet[Project]:
     """Return projects for the home grid, optionally filtered by search term.
 
-    Search matches project name, description (case-insensitive), or an exact tag
-    string in the PostgreSQL tags array. Annotates task_count, done_count,
+    Search matches project name, description (fuzzy trigram + substring), or any
+    tag via partial/fuzzy array lookup. Annotates task_count, done_count,
     progress (integer percent), and soonest_task (name of earliest-due eligible
     task). Results are ordered by most recently updated first.
     """
     queryset = Project.objects.all()
 
     # Narrow the queryset before aggregates when the user typed a search term.
-    if search:
-        queryset = queryset.filter(
-            Q(name__icontains=search)
-            | Q(description__icontains=search)
-            | Q(tags__contains=[search])
-        )
+    queryset = apply_fuzzy_search(queryset, search)
 
     # Subquery: name of the next-due open task for each project row.
     soonest_task_subquery = Subquery(

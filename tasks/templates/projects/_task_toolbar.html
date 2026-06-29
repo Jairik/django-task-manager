@@ -1,0 +1,197 @@
+{% comment %}
+Task list toolbar for the project detail page. Expects `project`, `task_list_ui`,
+and filter/sort choice tuples from the view.
+
+Single GET form preserves search, filter, and sort params on submit. Popovers are
+toggled via includes/project_detail_toolbar.js.
+{% endcomment %}
+
+<div id="task-toolbar" class="mb-1">
+
+    <div class="flex gap-2.5">
+        <form method="get"
+              action="{% url 'project_detail' project.pk %}"
+              id="task-toolbar-form"
+              class="flex-1 flex items-center gap-2.5 min-w-0">
+
+            <!-- Search field — submits the full form (filters + sort preserved). -->
+            <div class="flex-1 flex items-center gap-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[11px] px-[14px] h-[46px] shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)] focus-within:border-slate-300 dark:focus-within:border-slate-600 min-w-0">
+                <svg class="shrink-0 text-slate-400 dark:text-slate-500" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+                </svg>
+                {% comment %}maxlength matches tasks.limits.MAX_SEARCH_QUERY_LENGTH{% endcomment %}
+                <input type="search"
+                       name="q"
+                       value="{{ task_list_ui.search }}"
+                       maxlength="200"
+                       placeholder="Search tasks&hellip;"
+                       class="w-full min-w-0 bg-transparent outline-none text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500">
+            </div>
+
+            <!-- Filter trigger + popover -->
+            <div class="relative shrink-0">
+                <button type="button"
+                        id="task-filter-trigger"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="task-filter-popover"
+                        aria-label="Filter tasks{% if task_list_ui.active_filter_count %} ({{ task_list_ui.active_filter_count }} active){% endif %}"
+                        class="flex items-center gap-[7px] bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 rounded-[11px] h-[46px] px-3 sm:px-4 font-bold text-[13.5px] shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
+                    <svg class="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"></polygon>
+                    </svg>
+                    <span class="hidden sm:inline">Filter</span>
+                    {% if task_list_ui.active_filter_count %}
+                    <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-slate-200 dark:bg-slate-700 text-[11px] font-extrabold text-slate-700 dark:text-slate-200">
+                        {{ task_list_ui.active_filter_count }}
+                    </span>
+                    {% endif %}
+                </button>
+
+                <div id="task-filter-popover"
+                     role="dialog"
+                     aria-label="Filter tasks"
+                     class="hidden absolute right-0 top-[calc(100%+8px)] z-50 w-[min(100vw-2rem,320px)] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[12px] shadow-[0_8px_24px_rgba(15,23,42,0.12)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.45)] p-4">
+                    <h3 class="text-[13px] font-extrabold text-slate-900 dark:text-slate-100 mb-3">Filter tasks</h3>
+
+                    <!-- Priority checkboxes (all five model levels) -->
+                    <fieldset class="mb-4 border-0 p-0 m-0">
+                        <legend class="text-[11px] font-bold uppercase tracking-[0.04em] text-slate-400 dark:text-slate-500 mb-2">Priority</legend>
+                        <div class="flex flex-col gap-2">
+                            {% for priority in task_filter_priorities %}
+                            <label class="flex items-center gap-2.5 text-[13px] font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                                <input type="checkbox"
+                                       name="priority"
+                                       value="{{ priority.value }}"
+                                       class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-green-600 focus:ring-green-500"
+                                       {% if priority.value in task_list_ui.selected_priorities %}checked{% endif %}>
+                                {{ priority.label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+
+                    <!-- Due date bucket -->
+                    <fieldset class="mb-4 border-0 p-0 m-0">
+                        <legend class="text-[11px] font-bold uppercase tracking-[0.04em] text-slate-400 dark:text-slate-500 mb-2">Due date</legend>
+                        <select name="due"
+                                class="w-full h-[38px] px-3 rounded-[9px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[13px] font-medium text-slate-900 dark:text-slate-100 outline-none focus:border-slate-300 dark:focus:border-slate-600">
+                            {% for value, label in task_due_filter_choices %}
+                            <option value="{{ value }}" {% if task_list_ui.due_filter == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </fieldset>
+
+                    <div class="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-700">
+                        <button type="button"
+                                id="task-filter-clear"
+                                class="text-[12.5px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
+                            Clear all
+                        </button>
+                        <button type="submit"
+                                class="h-[36px] px-4 rounded-[9px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[12.5px] font-bold hover:bg-slate-800 dark:hover:bg-slate-200">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sort trigger + popover -->
+            <div class="relative shrink-0">
+                <button type="button"
+                        id="task-sort-trigger"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="task-sort-popover"
+                        aria-label="{{ task_list_ui.sort_button_label }}"
+                        class="flex items-center gap-[7px] bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 rounded-[11px] h-[46px] px-3 sm:px-4 font-bold text-[13.5px] shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
+                    <svg class="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="4" y1="6" x2="16" y2="6"></line>
+                        <line x1="8" y1="12" x2="20" y2="12"></line>
+                        <line x1="4" y1="18" x2="12" y2="18"></line>
+                    </svg>
+                    <span class="hidden sm:inline whitespace-nowrap">{{ task_list_ui.sort_button_label }}</span>
+                </button>
+
+                <div id="task-sort-popover"
+                     role="dialog"
+                     aria-label="Sort tasks"
+                     class="hidden absolute right-0 top-[calc(100%+8px)] z-50 w-[min(100vw-2rem,300px)] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[12px] shadow-[0_8px_24px_rgba(15,23,42,0.12)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.45)] p-4">
+                    <h3 class="text-[13px] font-extrabold text-slate-900 dark:text-slate-100 mb-3">Sort tasks</h3>
+
+                    <fieldset class="mb-4 border-0 p-0 m-0">
+                        <legend class="sr-only">Sort field</legend>
+                        <div class="flex flex-col gap-2">
+                            {% for value, label in task_sort_choices %}
+                            <label class="flex items-center gap-2.5 text-[13px] font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                                <input type="radio"
+                                       name="sort"
+                                       value="{{ value }}"
+                                       class="w-4 h-4 border-slate-300 dark:border-slate-600 text-green-600 focus:ring-green-500"
+                                       {% if task_list_ui.sort_by == value %}checked{% endif %}>
+                                {{ label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="border-0 p-0 m-0">
+                        <legend class="text-[11px] font-bold uppercase tracking-[0.04em] text-slate-400 dark:text-slate-500 mb-2">Direction</legend>
+                        <div class="inline-flex rounded-[9px] border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-900">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="dir" value="asc" class="sr-only peer" {% if task_list_ui.sort_dir == "asc" %}checked{% endif %}>
+                                <span class="block px-3 py-1.5 rounded-[7px] text-[12.5px] font-bold text-slate-500 dark:text-slate-400 peer-checked:bg-slate-900 peer-checked:dark:bg-slate-100 peer-checked:text-white peer-checked:dark:text-slate-900">Ascending</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="dir" value="desc" class="sr-only peer" {% if task_list_ui.sort_dir == "desc" %}checked{% endif %}>
+                                <span class="block px-3 py-1.5 rounded-[7px] text-[12.5px] font-bold text-slate-500 dark:text-slate-400 peer-checked:bg-slate-900 peer-checked:dark:bg-slate-100 peer-checked:text-white peer-checked:dark:text-slate-900">Descending</span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <div class="flex justify-end mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+                        <button type="submit"
+                                class="h-[36px] px-4 rounded-[9px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[12.5px] font-bold hover:bg-slate-800 dark:hover:bg-slate-200">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- Add task — outside the GET form; preserve current list params in the link. -->
+        <a href="{% url 'task_create' project.pk %}{% if task_list_ui.query_string %}?{{ task_list_ui.query_string }}{% endif %}"
+           aria-label="Add task"
+           class="shrink-0 flex items-center gap-[7px] bg-green-600 hover:bg-green-700 text-white rounded-[11px] h-[46px] px-[18px] font-bold text-[13.5px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_6px_14px_rgba(22,163,74,.2)]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span class="hidden sm:inline">Add task</span>
+        </a>
+    </div>
+
+    {% if task_list_ui.filter_chips %}
+    <!-- Active filter chips -->
+    <div id="task-filter-chips" class="flex flex-wrap items-center gap-2 mt-2.5">
+        {% for chip in task_list_ui.filter_chips %}
+        <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-[8px] bg-slate-200 dark:bg-slate-700 text-[12px] font-semibold text-slate-700 dark:text-slate-200">
+            {{ chip.label }}
+            <button type="button"
+                    class="task-chip-remove w-5 h-5 flex items-center justify-center rounded-[5px] text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-slate-100"
+                    data-chip-param="{{ chip.param }}"
+                    data-chip-value="{{ chip.value }}"
+                    aria-label="Remove {{ chip.label }}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </span>
+        {% endfor %}
+        <button type="button"
+                id="task-chips-clear-all"
+                class="ml-auto text-[12px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
+            Clear all
+        </button>
+    </div>
+    {% endif %}
+</div>

@@ -9,6 +9,7 @@ from tasks.models import Priority, Project, Task, TaskStatus
 from tasks.queries import (
     advance_task_status,
     build_task_status_sections,
+    reopen_task_to_todo,
     revert_task_to_todo,
     create_task_for_project,
     delete_project,
@@ -155,7 +156,7 @@ def test_project_detail_search_by_description(client: Client) -> None:
 
 @pytest.mark.django_db
 def test_project_detail_search_by_tag(client: Client) -> None:
-    """Search matches an exact tag string; partial tag text alone is not enough."""
+    """Search matches tags by partial and exact text."""
     project = Project.objects.create(name="Tag search")
     # Name deliberately avoids "backend" so a partial tag query cannot match via name.
     Task.objects.create(
@@ -179,7 +180,23 @@ def test_project_detail_search_by_tag(client: Client) -> None:
 
     assert "API refactor" in exact_content
     assert "UI polish" not in exact_content
-    assert "API refactor" not in partial_content
+    assert "API refactor" in partial_content
+    assert "UI polish" not in partial_content
+
+
+@pytest.mark.django_db
+def test_project_detail_search_fuzzy_name_typo(client: Client) -> None:
+    """Fuzzy search tolerates minor typos in task names."""
+    project = Project.objects.create(name="Search board")
+    Task.objects.create(project=project, name="Deploy release", status=TaskStatus.TODO)
+    Task.objects.create(project=project, name="Write docs", status=TaskStatus.TODO)
+
+    response = client.get(f"/projects/{project.pk}/", {"q": "depliy"})
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Deploy release" in content
+    assert "Write docs" not in content
 
 
 @pytest.mark.django_db
@@ -550,18 +567,34 @@ def test_revert_task_to_todo_moves_done_to_todo() -> None:
 
 @pytest.mark.parametrize(
     "initial_status",
-    [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED],
+    [TaskStatus.TODO, TaskStatus.IN_PROGRESS],
 )
 @pytest.mark.django_db
-def test_revert_task_to_todo_is_noop_when_not_done(initial_status: TaskStatus) -> None:
-    """Only done tasks are reverted; other statuses are left unchanged."""
-    project = Project.objects.create(name="Revert noop")
+def test_reopen_task_to_todo_is_noop_for_open_statuses(initial_status: TaskStatus) -> None:
+    """Open tasks are unchanged; only done and cancelled reopen to todo."""
+    project = Project.objects.create(name="Reopen noop")
     task = Task.objects.create(project=project, name="Stay put", status=initial_status)
 
-    revert_task_to_todo(task)
+    reopen_task_to_todo(task)
     task.refresh_from_db()
 
     assert task.status == initial_status
+
+
+@pytest.mark.django_db
+def test_reopen_task_to_todo_moves_cancelled_to_todo() -> None:
+    """Cancelled tasks can be restored back to todo."""
+    project = Project.objects.create(name="Restore path")
+    task = Task.objects.create(
+        project=project,
+        name="Dropped",
+        status=TaskStatus.CANCELLED,
+    )
+
+    reopen_task_to_todo(task)
+    task.refresh_from_db()
+
+    assert task.status == TaskStatus.TODO
 
 
 @pytest.mark.django_db
@@ -862,3 +895,157 @@ def test_project_delete_view_removes_project(client: Client) -> None:
     assert response["Location"] == "/"
     assert not Project.objects.filter(pk=project_pk).exists()
     assert not Task.objects.filter(pk=task_pk).exists()
+
+
+@pytest.mark.django_db
+def test_project_detail_toolbar_default_labels(client: Client) -> None:
+    """Default toolbar shows Filter and Sort labels without an active filter badge."""
+    project = Project.objects.create(name="Toolbar defaults")
+
+    response = client.get(f"/projects/{project.pk}/")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert 'id="task-filter-trigger"' in content
+    assert 'id="task-sort-trigger"' in content
+    assert "Filter tasks" in content
+    assert "Sort: Due date ↑" in content
+
+
+@pytest.mark.django_db
+def test_project_detail_toolbar_active_filter_chips(client: Client) -> None:
+    """Active filter URL params render chips and a Filter count badge."""
+    project = Project.objects.create(name="Toolbar filters")
+
+    response = client.get(f"/projects/{project.pk}/?priority=low")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Priority: Low" in content
+    assert 'data-chip-param="priority"' in content
+    assert 'aria-label="Filter tasks (1 active)"' in content
+
+
+@pytest.mark.django_db
+def test_project_detail_toolbar_sort_button_label(client: Client) -> None:
+    """Sort button label reflects sort field and descending direction from the URL."""
+    project = Project.objects.create(name="Toolbar sort")
+
+    response = client.get(f"/projects/{project.pk}/?sort=priority&dir=desc")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Sort: Priority ↓" in content
+    assert 'value="priority"' in content
+    assert 'value="desc"' in content
+
+
+@pytest.mark.django_db
+def test_project_detail_manual_sort_shows_drag_grip(client: Client) -> None:
+    """Manual sort enables the drag grip placeholder on task rows."""
+    project = Project.objects.create(name="Manual sort")
+    Task.objects.create(project=project, name="Reorder me", status=TaskStatus.TODO)
+
+    response = client.get(f"/projects/{project.pk}/?sort=manual")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert 'data-manual-sort="true"' in content
+    assert "cursor-grab" in content
+
+
+@pytest.mark.django_db
+def test_project_detail_task_cards_show_status_accents(client: Client) -> None:
+    """Task rows render status-colored left borders and status pills."""
+    project = Project.objects.create(name="Status accents")
+    Task.objects.create(project=project, name="Blue task", status=TaskStatus.TODO)
+    Task.objects.create(project=project, name="Orange task", status=TaskStatus.IN_PROGRESS)
+    Task.objects.create(project=project, name="Green task", status=TaskStatus.DONE)
+    Task.objects.create(project=project, name="Gray task", status=TaskStatus.CANCELLED)
+
+    response = client.get(f"/projects/{project.pk}/")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "border-l-blue-600" in content
+    assert "border-l-orange-600" in content
+    assert "border-l-green-600" in content
+    assert "border-l-slate-400" in content
+    assert content.count("To do") >= 1
+    assert content.count("In progress") >= 1
+    assert content.count("Done") >= 1
+    assert content.count("Cancelled") >= 1
+
+
+@pytest.mark.django_db
+def test_project_detail_done_and_cancelled_sections_collapsed(client: Client) -> None:
+    """Done and cancelled groups use <details> without open (collapsed by default)."""
+    project = Project.objects.create(name="Collapsed sections")
+    Task.objects.create(project=project, name="Finished", status=TaskStatus.DONE)
+    Task.objects.create(project=project, name="Dropped", status=TaskStatus.CANCELLED)
+
+    response = client.get(f"/projects/{project.pk}/")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    # Collapsed section wrappers omit the open attribute.
+    assert 'class="group/section mt-7 rounded-xl bg-green-50/60' in content
+    assert 'class="group/section mt-7 rounded-xl bg-slate-100/80' in content
+    assert '<details class="group/section' in content
+    # Chevron present on collapsed sections.
+    assert content.count('group-open/section:rotate-180') >= 2
+
+
+@pytest.mark.django_db
+def test_project_detail_todo_and_in_progress_sections_expandable(client: Client) -> None:
+    """Todo and in-progress groups use <details open> with collapsible chevrons."""
+    project = Project.objects.create(name="Open sections")
+    Task.objects.create(project=project, name="Queued", status=TaskStatus.TODO)
+    Task.objects.create(project=project, name="Active", status=TaskStatus.IN_PROGRESS)
+
+    response = client.get(f"/projects/{project.pk}/")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert 'class="group/section mt-7 rounded-xl bg-blue-50/60' in content
+    assert 'class="group/section mt-7 rounded-xl bg-orange-50/60' in content
+    assert '<details class="group/section mt-7 rounded-xl bg-blue-50/60' in content
+    assert '<details class="group/section mt-7 rounded-xl bg-orange-50/60' in content
+    assert ' open>' in content
+    assert content.count('group-open/section:rotate-180') >= 2
+
+
+@pytest.mark.django_db
+def test_project_detail_cancelled_task_shows_restore_action(client: Client) -> None:
+    """Cancelled rows include a restore button posting to the revert endpoint."""
+    project = Project.objects.create(name="Restore UI")
+    task = Task.objects.create(
+        project=project,
+        name="Bring back",
+        status=TaskStatus.CANCELLED,
+    )
+
+    response = client.get(f"/projects/{project.pk}/")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert 'title="Restore"' in content
+    assert f'/projects/{project.pk}/tasks/{task.pk}/revert/' in content
+
+
+@pytest.mark.django_db
+def test_task_revert_view_restores_cancelled_task(client: Client) -> None:
+    """POSTing revert on a cancelled task moves it back to todo."""
+    project = Project.objects.create(name="Restore view")
+    task = Task.objects.create(
+        project=project,
+        name="Restore me",
+        status=TaskStatus.CANCELLED,
+    )
+
+    response = client.post(f"/projects/{project.pk}/tasks/{task.pk}/revert/")
+
+    assert response.status_code == 302
+    assert response["Location"] == f"/projects/{project.pk}/"
+    task.refresh_from_db()
+    assert task.status == TaskStatus.TODO

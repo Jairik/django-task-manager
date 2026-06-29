@@ -52,6 +52,12 @@ class Project(models.Model):
             models.Index(fields=["due_date"], name="project_due_date_idx"),
             models.Index(fields=["soonest_due_date"], name="project_soonest_due_date_idx"),
             GinIndex(fields=["tags"], name="project_tags_gin_idx"),
+            GinIndex(fields=["name"], name="project_name_trgm_idx", opclasses=["gin_trgm_ops"]),
+            GinIndex(
+                fields=["description"],
+                name="project_description_trgm_idx",
+                opclasses=["gin_trgm_ops"],
+            ),
         ]
   
 
@@ -94,6 +100,12 @@ class Task(models.Model):
             models.Index(fields=["project"], name="task_project_id_idx"),
             models.Index(fields=["due_date"], name="task_due_date_idx"),
             GinIndex(fields=["tags"], name="task_tags_gin_idx"),
+            GinIndex(fields=["name"], name="task_name_trgm_idx", opclasses=["gin_trgm_ops"]),
+            GinIndex(
+                fields=["description"],
+                name="task_description_trgm_idx",
+                opclasses=["gin_trgm_ops"],
+            ),
         ]
 
     def __str__(self) -> str:

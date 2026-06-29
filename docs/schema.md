@@ -109,7 +109,9 @@ Optional list of up to **3** short labels on both `project` and `task`.
 | ---------------------- | ---------- | ------ | -------------------- |
 | `project_due_date_idx`         | `due_date`         | B-tree | Due-date list filter              |
 | `project_soonest_due_date_idx` | `soonest_due_date` | B-tree | Sort/filter by nearest task deadline |
-| `project_tags_gin_idx`         | `tags`             | GIN    | Tag search / filter               |
+| `project_tags_gin_idx`         | `tags`             | GIN    | Tag array storage / lookup        |
+| `project_name_trgm_idx`        | `name`             | GIN (`gin_trgm_ops`) | Fuzzy name search     |
+| `project_description_trgm_idx` | `description`      | GIN (`gin_trgm_ops`) | Fuzzy description search |
 
 
 ---
@@ -142,7 +144,9 @@ Optional list of up to **3** short labels on both `project` and `task`.
 | --------------------- | ------------ | ------ | --------------------- |
 | `task_project_id_idx` | `project_id` | B-tree | Tasks for one project   |
 | `task_due_date_idx`   | `due_date`   | B-tree | Task due-date queries   |
-| `task_tags_gin_idx`   | `tags`       | GIN    | Tag search / filter     |
+| `task_tags_gin_idx`   | `tags`       | GIN    | Tag array storage / lookup |
+| `task_name_trgm_idx`        | `name`        | GIN (`gin_trgm_ops`) | Fuzzy name search        |
+| `task_description_trgm_idx` | `description` | GIN (`gin_trgm_ops`) | Fuzzy description search |
 
 
 ### `soonest_due_date` (project)
@@ -153,6 +157,14 @@ Denormalized copy of the earliest `due_date` among the project's tasks. Updated 
 | -------- | ------------------------------------------ |
 | Type     | `DATE`                                     |
 | Empty    | `NULL` when the project has no dated tasks |
+
+---
+
+## PostgreSQL extensions
+
+| Extension | Purpose |
+| --------- | ------- |
+| `pg_trgm` | Trigram similarity for fuzzy name/description search (`TrigramExtension` migration) |
 
 ---
 
@@ -189,6 +201,8 @@ class Project(models.Model):
             models.Index(fields=["due_date"], name="project_due_date_idx"),
             models.Index(fields=["soonest_due_date"], name="project_soonest_due_date_idx"),
             GinIndex(fields=["tags"], name="project_tags_gin_idx"),
+            GinIndex(fields=["name"], name="project_name_trgm_idx", opclasses=["gin_trgm_ops"]),
+            GinIndex(fields=["description"], name="project_description_trgm_idx", opclasses=["gin_trgm_ops"]),
         ]
 
 
@@ -208,6 +222,8 @@ class Task(models.Model):
             models.Index(fields=["project_id"], name="task_project_id_idx"),
             models.Index(fields=["due_date"], name="task_due_date_idx"),
             GinIndex(fields=["tags"], name="task_tags_gin_idx"),
+            GinIndex(fields=["name"], name="task_name_trgm_idx", opclasses=["gin_trgm_ops"]),
+            GinIndex(fields=["description"], name="task_description_trgm_idx", opclasses=["gin_trgm_ops"]),
         ]
 ```
 

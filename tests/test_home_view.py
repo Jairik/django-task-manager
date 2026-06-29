@@ -44,7 +44,7 @@ def test_home_search_by_name(client: Client) -> None:
 
 @pytest.mark.django_db
 def test_home_search_by_tag(client: Client) -> None:
-    """Search matches an exact tag string; partial tag text alone is not enough."""
+    """Search matches tags by partial and exact text."""
     # Name deliberately avoids "backend" so a partial tag query cannot match via name.
     Project.objects.create(name="API refactor", tags=["backend"])
     Project.objects.create(name="UI polish", tags=["frontend"])
@@ -57,7 +57,22 @@ def test_home_search_by_tag(client: Client) -> None:
 
     assert "API refactor" in exact_content
     assert "UI polish" not in exact_content
-    assert "API refactor" not in partial_content
+    assert "API refactor" in partial_content
+    assert "UI polish" not in partial_content
+
+
+@pytest.mark.django_db
+def test_home_search_fuzzy_name_typo(client: Client) -> None:
+    """Fuzzy search tolerates minor typos in project names."""
+    Project.objects.create(name="Alpha Release")
+    Project.objects.create(name="Beta Cleanup")
+
+    response = client.get("/", {"q": "Alpa Release"})
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Alpha Release" in content
+    assert "Beta Cleanup" not in content
 
 
 @pytest.mark.django_db

@@ -2,11 +2,14 @@
 Header right-side light/dark segmented control. Pair with theme_setup.html and
 theme_toggle.html. Optional `header_link` block: pass True to wrap the app name
 in a link to home (used on inner pages like project create).
+
+The active pill is purely class-driven: the light button gets the raised pill in
+light mode (and goes flat in dark), the dark button does the reverse via `dark:`.
 {% endcomment %}
 
-<div class="flex items-center gap-[3px] bg-[var(--toggle-track)] border border-[var(--border)] rounded-[9px] p-[3px]">
+<div class="flex items-center gap-[3px] bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[9px] p-[3px]">
     <button type="button" id="theme-light" aria-label="Light theme" aria-pressed="true"
-            class="flex items-center justify-center w-7 h-[23px] rounded-md">
+            class="flex items-center justify-center w-7 h-[23px] rounded-md bg-white shadow-[0_1px_2px_rgba(15,23,42,0.12)] dark:bg-transparent dark:shadow-none">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="12" r="4"></circle>
             <line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line>
@@ -16,7 +19,7 @@ in a link to home (used on inner pages like project create).
         </svg>
     </button>
     <button type="button" id="theme-dark" aria-label="Dark theme" aria-pressed="false"
-            class="flex items-center justify-center w-7 h-[23px] rounded-md">
+            class="flex items-center justify-center w-7 h-[23px] rounded-md bg-transparent shadow-none dark:bg-slate-700 dark:shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="#94a3b8">
             <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path>
         </svg>

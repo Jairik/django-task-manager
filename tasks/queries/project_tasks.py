@@ -13,6 +13,7 @@ from django.db.models import F, Min, Q, QuerySet
 from django.utils import timezone
 
 from tasks.models import Project, Task, TaskStatus
+from tasks.queries.fuzzy_search import apply_fuzzy_search
 
 # Fixed section order for the project detail template (in progress → cancelled).
 TASK_STATUS_SECTION_ORDER: tuple[TaskStatus, ...] = (
@@ -112,13 +113,13 @@ def advance_task_status(task: Task) -> Task:
     return task
 
 
-def revert_task_to_todo(task: Task) -> Task:
-    """Move a completed task back to ``todo``.
+def reopen_task_to_todo(task: Task) -> Task:
+    """Move a done or cancelled task back to ``todo``.
 
-    Only ``done`` tasks are reverted; other statuses are left unchanged (no save).
+    Open statuses (todo, in_progress) are left unchanged (no save).
     Status-only changes do not refresh ``soonest_due_date``.
     """
-    if task.status != TaskStatus.DONE:
+    if task.status not in (TaskStatus.DONE, TaskStatus.CANCELLED):
         return task
 
     task.status = TaskStatus.TODO
@@ -126,23 +127,23 @@ def revert_task_to_todo(task: Task) -> Task:
     return task
 
 
+def revert_task_to_todo(task: Task) -> Task:
+    """Alias for :func:`reopen_task_to_todo` (kept for existing imports)."""
+    return reopen_task_to_todo(task)
+
+
 def get_project_tasks(project_id: int, search: str = "") -> QuerySet[Task]:
     """Return tasks for a project, optionally filtered by search term.
 
-    Search matches task name, description (case-insensitive), or an exact tag
-    string in the PostgreSQL tags array. Uses task_project_id_idx for project
-    scope and task_tags_gin_idx for tag lookup. Tasks are sorted by due date
-    (nulls last), then name, then primary key as a stable tiebreaker.
+    Search matches task name, description (fuzzy trigram + substring), or any
+    tag via partial/fuzzy array lookup. Uses task_project_id_idx for project
+    scope. Tasks are sorted by due date (nulls last), then name, then primary
+    key as a stable tiebreaker.
     """
     queryset = Task.objects.filter(project_id=project_id)
 
     # Narrow the queryset before ordering when the user typed a search term.
-    if search:
-        queryset = queryset.filter(
-            Q(name__icontains=search)
-            | Q(description__icontains=search)
-            | Q(tags__contains=[search])
-        )
+    queryset = apply_fuzzy_search(queryset, search)
 
     return queryset.order_by(F("due_date").asc(nulls_last=True), "name", "pk")
 

@@ -9,11 +9,18 @@ from tasks.queries import (
     get_project_tasks,
     partition_overdue_tasks,
 )
+from tasks.task_list_ui import (
+    DUE_FILTER_CHOICES,
+    FILTERABLE_PRIORITIES,
+    SORT_CHOICES,
+    parse_task_list_params,
+)
 
 
 def project_detail(request, pk: int):
     """Render one project and its tasks grouped by status."""
     project = get_object_or_404(Project, pk=pk)
+    task_list_ui = parse_task_list_params(request.GET)
     search = normalize_search_query(request.GET.get("q", ""))
 
     # Materialize once so we can group tasks and tally header stats with one query.
@@ -36,5 +43,9 @@ def project_detail(request, pk: int):
             "task_count": task_count,
             "done_count": done_count,
             "progress": progress,
+            "task_list_ui": task_list_ui,
+            "task_filter_priorities": FILTERABLE_PRIORITIES,
+            "task_due_filter_choices": DUE_FILTER_CHOICES,
+            "task_sort_choices": SORT_CHOICES,
         },
     )

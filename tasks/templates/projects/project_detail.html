@@ -8,29 +8,29 @@
     {% include "includes/theme_setup.html" %}
 </head>
 
-<!-- Page background and base text color come from theme CSS variables. -->
-<body class="min-h-screen bg-[var(--page-bg)] font-sans antialiased text-[var(--text)]">
+<!-- Page background and base text color via Tailwind light/dark utilities. -->
+<body class="min-h-screen bg-slate-100 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100">
 
     <div class="min-h-screen py-9 px-7 box-border">
 
         <!-- Centered app window — same shell as the other pages. -->
-        <div class="w-full max-w-[1120px] mx-auto rounded-[18px] overflow-hidden border border-[var(--border-app)] shadow-[0_8px_30px_var(--shadow-app)]">
+        <div class="w-full max-w-[1120px] mx-auto rounded-[18px] overflow-hidden border border-slate-200 dark:border-slate-700 shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
 
             <!-- Top bar — app name links home; theme toggle persists via localStorage. -->
-            <header class="h-[52px] flex items-center justify-between px-6 bg-[var(--surface)] border-b border-[var(--border-light)]">
-                <a href="{% url 'home' %}" class="text-[14px] font-bold text-[var(--text)] tracking-[-0.015em] hover:text-[var(--text-muted)]">task manager</a>
+            <header class="h-[52px] flex items-center justify-between px-6 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
+                <a href="{% url 'home' %}" class="text-[14px] font-bold text-slate-900 dark:text-slate-100 tracking-[-0.015em] hover:text-slate-500 dark:hover:text-slate-400">Ultra Super Project Task Manager+</a>
 
                 {% include "includes/theme_header_toggle.html" %}
             </header>
 
             <!-- Body — muted panel background like the home page content area. -->
-            <div class="p-[30px_28px_38px] bg-[var(--surface-muted)]">
+            <div class="p-[30px_28px_38px] bg-slate-50 dark:bg-slate-900">
 
                 <div class="w-full max-w-[780px] mx-auto">
 
                     <!-- Back link to the project grid. -->
                     <a href="{% url 'home' %}"
-                       class="inline-flex items-center gap-1.5 mb-[18px] text-[13px] font-semibold text-[var(--text-muted)] hover:text-[var(--text)]">
+                       class="inline-flex items-center gap-1.5 mb-[18px] text-[13px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="11 18 5 12 11 6"></polyline>
                         </svg>
@@ -38,13 +38,13 @@
                     </a>
 
                     <!-- ===================== PROJECT HEADER CARD ====================== -->
-                    <div class="bg-[var(--surface)] border border-[var(--border-card)] rounded-[16px] p-[24px_26px] shadow-[0_1px_2px_var(--shadow-card),0_6px_18px_var(--shadow-card)]">
+                    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[16px] p-[24px_26px] shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_18px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_6px_18px_rgba(0,0,0,0.25)]">
 
                         <!-- Tag badges (left) + priority badge (right). -->
                         <div class="flex justify-between items-start gap-3 mb-[14px]">
                             <div class="flex gap-1.5 flex-wrap">
                                 {% for tag in project.tags %}
-                                <span class="text-[11px] font-semibold px-[9px] py-[3px] rounded-[7px] bg-[#e2e8f0] text-[#475569]">{{ tag }}</span>
+                                <span class="text-[11px] font-semibold px-[9px] py-[3px] rounded-[7px] bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{{ tag }}</span>
                                 {% endfor %}
                             </div>
 
@@ -54,7 +54,7 @@
                                 <a href="{% url 'project_edit' project.pk %}"
                                    aria-label="Edit project"
                                    title="Edit project"
-                                   class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-focus)] hover:bg-[var(--surface-muted)] text-[var(--text-subtle)] hover:text-[var(--text-muted)]">
+                                   class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -63,18 +63,18 @@
 
                                 <!-- Priority: high/very_high → red, medium → amber, else slate. -->
                                 <span class="inline-flex items-center gap-[5px] text-[10.5px] font-bold px-[9px] py-[3px] rounded-[7px] whitespace-nowrap
-                                    {% if project.priority == 'high' or project.priority == 'very_high' %}bg-[#fee2e2] text-[#b91c1c]
-                                    {% elif project.priority == 'medium' %}bg-[#fef3c7] text-[#b45309]
-                                    {% else %}bg-[#e2e8f0] text-[#475569]{% endif %}">
+                                    {% if project.priority == 'high' or project.priority == 'very_high' %}bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300
+                                    {% elif project.priority == 'medium' %}bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300
+                                    {% else %}bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300{% endif %}">
                                     <span class="w-1.5 h-1.5 rounded-full bg-current"></span>{{ project.get_priority_display }}
                                 </span>
                             </div>
                         </div>
 
                         <!-- Project name + optional description. -->
-                        <div class="text-[23px] font-extrabold text-[var(--text)] tracking-[-0.02em]">{{ project.name }}</div>
+                        <div class="text-[23px] font-extrabold text-slate-900 dark:text-slate-100 tracking-[-0.02em] break-words">{{ project.name }}</div>
                         {% if project.description %}
-                        <div class="mt-2 text-sm leading-[1.55] font-medium text-[var(--text-muted)] max-w-[620px]">{{ project.description }}</div>
+                        <div class="mt-2 text-sm leading-[1.55] font-medium text-slate-500 dark:text-slate-400 max-w-[620px] break-words min-w-0">{{ project.description }}</div>
                         {% endif %}
 
                         {% comment %}
@@ -83,125 +83,83 @@
                         {% endcomment %}
                         <div class="flex gap-9 mt-[18px] flex-wrap">
                             <div>
-                                <div class="text-[11px] font-semibold text-[var(--text-subtle)] uppercase tracking-[0.04em]">Progress</div>
-                                <div class="mt-[3px] text-[19px] font-extrabold text-[#16a34a]">{{ progress }}%</div>
+                                <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">Progress</div>
+                                <div class="mt-[3px] text-[19px] font-extrabold text-green-600 dark:text-green-400">{{ progress }}%</div>
                             </div>
                             <div>
-                                <div class="text-[11px] font-semibold text-[var(--text-subtle)] uppercase tracking-[0.04em]">Tasks done</div>
-                                <div class="mt-[3px] text-[19px] font-extrabold text-[var(--text)]">{{ done_count }}/{{ task_count }}</div>
+                                <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">Tasks done</div>
+                                <div class="mt-[3px] text-[19px] font-extrabold text-slate-900 dark:text-slate-100">{{ done_count }}/{{ task_count }}</div>
                             </div>
                             <div>
-                                <div class="text-[11px] font-semibold text-[var(--text-subtle)] uppercase tracking-[0.04em]">Due</div>
-                                <div class="mt-[3px] text-[19px] font-extrabold text-[var(--text)]">{% if project.due_date %}{{ project.due_date|date:"M j" }}{% else %}&mdash;{% endif %}</div>
+                                <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">Due</div>
+                                <div class="mt-[3px] text-[19px] font-extrabold text-slate-900 dark:text-slate-100">{% if project.due_date %}{{ project.due_date|date:"M j" }}{% else %}&mdash;{% endif %}</div>
                             </div>
                             <div>
-                                <div class="text-[11px] font-semibold text-[var(--text-subtle)] uppercase tracking-[0.04em]">Updated</div>
-                                <div class="mt-[3px] text-[19px] font-extrabold text-[var(--text)]">{{ project.updated_at|timesince }} ago</div>
+                                <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">Updated</div>
+                                <div class="mt-[3px] text-[19px] font-extrabold text-slate-900 dark:text-slate-100">{{ project.updated_at|timesince }} ago</div>
                             </div>
                         </div>
 
                         <!-- Progress bar. -->
-                        <div class="mt-[18px] h-2 bg-[var(--progress-track)] rounded-full overflow-hidden">
-                            <div class="h-full bg-[#16a34a] rounded-full w-[{{ progress }}%]"></div>
+                        <div class="mt-[18px] h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-green-600 rounded-full w-[{{ progress }}%]"></div>
                         </div>
                     </div>
                     <!-- =================== END PROJECT HEADER CARD ==================== -->
 
                     <!-- Tasks section heading. -->
-                    <div class="mt-7 mb-[14px] text-[13px] font-extrabold text-[var(--text)] uppercase tracking-[0.05em]">Tasks</div>
+                    <div class="mt-7 mb-[14px] text-[13px] font-extrabold text-slate-900 dark:text-slate-100 uppercase tracking-[0.05em]">Tasks</div>
 
-                    {% comment %}
-                    Toolbar. Search filters tasks via GET ?q= on name, description, and
-                    exact tag match. The Filter button is a placeholder for due-date
-                    filtering (see docs/scalingConcerns.md).
-                    {% endcomment %}
-                    <div class="flex gap-2.5 mb-1">
-                        <form method="get" action="{% url 'project_detail' project.pk %}" class="flex-1 flex items-center gap-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-[11px] px-[14px] h-[46px] shadow-[0_1px_2px_var(--shadow-card)] focus-within:border-[var(--border-focus)]">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-subtle)" stroke-width="2" stroke-linecap="round">
-                                <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>
-                            </svg>
-                            {% comment %}maxlength matches tasks.limits.MAX_SEARCH_QUERY_LENGTH{% endcomment %}
-                            <input type="search" name="q" value="{{ request.GET.q }}"
-                                   maxlength="200"
-                                   placeholder="Search tasks&hellip;"
-                                   class="w-full bg-transparent outline-none text-sm font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)]">
-                        </form>
-                        <button type="button"
-                                class="shrink-0 flex items-center gap-[7px] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text-muted)] border border-[var(--border)] hover:border-[var(--border-focus)] rounded-[11px] h-[46px] px-4 font-bold text-[13.5px] shadow-[0_1px_2px_var(--shadow-card)]">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"></polygon>
-                            </svg>
-                            Filter
-                        </button>
-                        <a href="{% url 'task_create' project.pk %}"
-                           class="shrink-0 flex items-center gap-[7px] bg-[#16a34a] hover:bg-[#15a049] text-white rounded-[11px] h-[46px] px-[18px] font-bold text-[13.5px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_6px_14px_rgba(22,163,74,.2)]">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
-                                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            Add task
-                        </a>
-                    </div>
+                    {% include "projects/_task_toolbar.html" %}
+
+                    <div id="task-list"
+                         data-manual-sort="{% if task_list_ui.is_manual_sort %}true{% else %}false{% endif %}">
 
                     {% comment %}
                     Overdue group — open tasks past their due date (provided separately
                     by the view). Shown above the status groups and flagged in red.
                     {% endcomment %}
                     {% if overdue_tasks %}
-                    <div class="mt-[22px]">
+                    <div class="mt-7 rounded-xl bg-red-50/60 dark:bg-red-950/20 p-3">
                         <div class="flex items-center gap-2 mb-3">
-                            <span class="w-[9px] h-[9px] rounded-full bg-[#dc2626]"></span>
-                            <span class="text-xs font-extrabold uppercase tracking-[0.05em] text-[#b91c1c]">Overdue</span>
-                            <span class="text-xs font-bold text-[var(--text-subtle)]">{{ overdue_tasks|length }}</span>
+                            <span class="w-[9px] h-[9px] rounded-full bg-red-600"></span>
+                            <span class="text-xs font-extrabold uppercase tracking-[0.05em] text-red-700 dark:text-red-400">Overdue</span>
+                            <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300">{{ overdue_tasks|length }}</span>
                         </div>
                         <div class="flex flex-col gap-2.5">
                             {% for task in overdue_tasks %}
-                                {% include "projects/_task_row.html" with project=project %}
+                                {% include "projects/_task_row.html" with project=project is_manual_sort=task_list_ui.is_manual_sort is_overdue=True %}
                             {% endfor %}
                         </div>
                     </div>
                     {% endif %}
 
                     {% comment %}
-                    Status groups (in progress → cancelled). Empty sections are skipped so the
-                    layout only shows groups that have tasks, like the design.
+                    Status groups (in progress → cancelled). Empty sections are skipped.
+                    All sections use collapsible chevrons via _task_status_section;
+                    done and cancelled are collapsed by default, todo and in progress open.
                     {% endcomment %}
                     {% for section in task_sections %}
                     {% if section.tasks %}
-                    <div class="mt-[22px]">
-                        <div class="flex items-center gap-2 mb-3">
-                            <!-- Dot + label colored per status. -->
-                            <span class="w-[9px] h-[9px] rounded-full
-                                {% if section.status == 'todo' %}bg-[#2563eb]
-                                {% elif section.status == 'in_progress' %}bg-[#ea580c]
-                                {% elif section.status == 'done' %}bg-[#16a34a]
-                                {% else %}bg-[#cbd5e1]{% endif %}"></span>
-                            <span class="text-xs font-extrabold uppercase tracking-[0.05em]
-                                {% if section.status == 'todo' %}text-[#2563eb]
-                                {% elif section.status == 'in_progress' %}text-[#ea580c]
-                                {% elif section.status == 'done' %}text-[#16a34a]
-                                {% else %}text-[var(--text-subtle)]{% endif %}">{{ section.label }}</span>
-                            <span class="text-xs font-bold text-[var(--text-subtle)]">{{ section.tasks|length }}</span>
-                        </div>
-                        <div class="flex flex-col gap-2.5">
-                            {% for task in section.tasks %}
-                                {% include "projects/_task_row.html" with project=project %}
-                            {% endfor %}
-                        </div>
-                    </div>
+                        {% if section.status == 'done' or section.status == 'cancelled' %}
+                            {% include "projects/_task_status_section.html" with section=section project=project task_list_ui=task_list_ui collapsed=True %}
+                        {% else %}
+                            {% include "projects/_task_status_section.html" with section=section project=project task_list_ui=task_list_ui collapsed=False %}
+                        {% endif %}
                     {% endif %}
                     {% endfor %}
 
                     <!-- Empty state when there are no tasks, or search returned no matches. -->
                     {% if task_count == 0 and not overdue_tasks %}
-                    <div class="mt-[22px] bg-[var(--surface)] border border-dashed border-[var(--border-dashed)] rounded-[15px] p-10 text-center">
+                    <div class="mt-[22px] bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-[15px] p-10 text-center">
                         {% if request.GET.q %}
-                        <p class="text-[15px] font-semibold text-[var(--text)]">No tasks match your search</p>
-                        <p class="mt-1 text-[13px] text-[var(--text-muted)]">Try a different term or clear the search box.</p>
+                        <p class="text-[15px] font-semibold text-slate-900 dark:text-slate-100">No tasks match your search</p>
+                        <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Try a different term or clear the search box.</p>
                         {% else %}
-                        <p class="text-[15px] font-semibold text-[var(--text)]">No tasks yet</p>
-                        <p class="mt-1 text-[13px] text-[var(--text-muted)]">Add the first task to start tracking progress.</p>
+                        <p class="text-[15px] font-semibold text-slate-900 dark:text-slate-100">No tasks yet</p>
+                        <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Add the first task to start tracking progress.</p>
                         <a href="{% url 'task_create' project.pk %}"
-                           class="inline-flex items-center gap-2 mt-4 bg-[#16a34a] hover:bg-[#15a049] text-white rounded-[11px] h-[42px] px-5 font-bold text-[13.5px]">
+                           class="inline-flex items-center gap-2 mt-4 bg-green-600 hover:bg-green-700 text-white rounded-[11px] h-[42px] px-5 font-bold text-[13.5px]">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
                                 <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
                             </svg>
@@ -211,11 +169,16 @@
                     </div>
                     {% endif %}
 
+                    </div><!-- /#task-list -->
+
                 </div>
             </div>
         </div>
     </div>
 
     {% include "includes/theme_toggle.html" %}
+    <script>
+    {% include "includes/project_detail_toolbar.js" %}
+    </script>
 </body>
 </html>

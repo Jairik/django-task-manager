@@ -8,29 +8,29 @@
     {% include "includes/theme_setup.html" %}
 </head>
 
-<!-- Page background and base text color come from theme CSS variables. -->
-<body class="min-h-screen bg-[var(--page-bg)] font-sans antialiased text-[var(--text)]">
+<!-- Page background and base text color via Tailwind light/dark utilities. -->
+<body class="min-h-screen bg-slate-100 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100">
 
     <div class="min-h-screen py-9 px-7 box-border">
 
         <!-- Centered app window — same shell as the other pages. -->
-        <div class="w-full max-w-[1120px] mx-auto rounded-[18px] overflow-hidden border border-[var(--border-app)] shadow-[0_8px_30px_var(--shadow-app)]">
+        <div class="w-full max-w-[1120px] mx-auto rounded-[18px] overflow-hidden border border-slate-200 dark:border-slate-700 shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
 
             <!-- Top bar — app name links home; theme toggle persists via localStorage. -->
-            <header class="h-[52px] flex items-center justify-between px-6 bg-[var(--surface)] border-b border-[var(--border-light)]">
-                <a href="{% url 'home' %}" class="text-[14px] font-bold text-[var(--text)] tracking-[-0.015em] hover:text-[var(--text-muted)]">task manager</a>
+            <header class="h-[52px] flex items-center justify-between px-6 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
+                <a href="{% url 'home' %}" class="text-[14px] font-bold text-slate-900 dark:text-slate-100 tracking-[-0.015em] hover:text-slate-500 dark:hover:text-slate-400">Ultra Super Project Task Manager+</a>
 
                 {% include "includes/theme_header_toggle.html" %}
             </header>
 
             <!-- Form body — muted panel background like the other pages. -->
-            <div class="p-[30px_28px_36px] bg-[var(--surface-muted)]">
+            <div class="p-[30px_28px_36px] bg-slate-50 dark:bg-slate-900">
 
                 <div class="w-full max-w-[660px] mx-auto">
 
                     <!-- Back link to the parent project. -->
                     <a href="{% url 'project_detail' project.pk %}"
-                       class="inline-flex items-center gap-1.5 mb-[18px] text-[13px] font-semibold text-[var(--text-muted)] hover:text-[var(--text)]">
+                       class="inline-flex items-center gap-1.5 mb-[18px] text-[13px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="11 18 5 12 11 6"></polyline>
                         </svg>
@@ -38,13 +38,13 @@
                     </a>
 
                     <!-- Form card — header / body / footer sections mirror the artifact. -->
-                    <div class="bg-[var(--surface)] border border-[var(--border-card)] rounded-[16px] overflow-hidden shadow-[0_1px_2px_var(--shadow-card),0_6px_18px_var(--shadow-card)]">
+                    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[16px] overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_18px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_6px_18px_rgba(0,0,0,0.25)]">
 
                         <!-- Card header: title + the project this task joins (starts in "To do"). -->
-                        <div class="p-[24px_28px_20px] border-b border-[var(--border-light)]">
-                            <div class="text-[20px] font-extrabold text-[var(--text)] tracking-[-0.02em]">New task</div>
-                            <div class="mt-1 text-[13px] font-medium text-[var(--text-subtle)]">
-                                Adding to <span class="text-[var(--text-muted)] font-bold">{{ project.name }}</span> — starts in <span class="text-[#2563eb] font-bold">To do</span>.
+                        <div class="p-[24px_28px_20px] border-b border-slate-100 dark:border-slate-700">
+                            <div class="text-[20px] font-extrabold text-slate-900 dark:text-slate-100 tracking-[-0.02em]">New task</div>
+                            <div class="mt-1 text-[13px] font-medium text-slate-400 dark:text-slate-500">
+                                Adding to <span class="text-slate-500 dark:text-slate-400 font-bold">{{ project.name }}</span> — starts in <span class="text-blue-600 dark:text-blue-400 font-bold">To do</span>.
                             </div>
                         </div>
 
@@ -53,9 +53,10 @@
 
                             {% comment %}
                             Shared field classes — match the create-project form so both
-                            screens feel identical; colors use CSS variables for theming.
+                            screens feel identical; light/dark Tailwind utilities keep
+                            the two themes in sync.
                             {% endcomment %}
-                            {% with input_class="w-full box-border h-[48px] bg-[var(--surface)] border border-[var(--border)] rounded-[11px] px-[14px] text-[15px] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:border-[#16a34a] focus:shadow-[0_0_0_3px_rgba(22,163,74,.12)] focus:outline-none" label_class="block text-[12.5px] font-bold text-[var(--text-muted)] mb-2" error_class="mt-1 text-xs font-medium text-[#b91c1c]" textarea_class="w-full box-border bg-[var(--surface)] border border-[var(--border)] rounded-[11px] px-[14px] py-[11px] text-[14.5px] leading-[1.5] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:border-[#16a34a] focus:shadow-[0_0_0_3px_rgba(22,163,74,.12)] focus:outline-none resize-y min-h-[96px]" %}
+                            {% with input_class="w-full box-border h-[48px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[11px] px-[14px] text-[15px] font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-600 focus:shadow-[0_0_0_3px_rgba(22,163,74,.12)] focus:outline-none" label_class="block text-[12.5px] font-bold text-slate-500 dark:text-slate-400 mb-2" error_class="mt-1 text-xs font-medium text-red-600 dark:text-red-400" textarea_class="w-full box-border bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[11px] px-[14px] py-[11px] text-[14.5px] leading-[1.5] font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-green-600 focus:shadow-[0_0_0_3px_rgba(22,163,74,.12)] focus:outline-none resize-y min-h-[96px]" %}
 
                             <!-- Card body: stacked fields. -->
                             <div class="p-[24px_28px_26px] flex flex-col gap-[22px]">
@@ -65,13 +66,13 @@
                             {% endwith %}
 
                             <!-- Card footer: actions on a muted strip, primary on the right. -->
-                            <div class="p-[18px_28px] bg-[var(--surface-muted)] border-t border-[var(--border-light)] flex justify-end gap-2.5">
+                            <div class="p-[18px_28px] bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2.5">
                                 <a href="{% url 'project_detail' project.pk %}"
-                                   class="inline-flex items-center h-[46px] px-5 bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text-muted)] border border-[var(--border)] rounded-[11px] font-bold text-[14px]">
+                                   class="inline-flex items-center h-[46px] px-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-[11px] font-bold text-[14px]">
                                     Cancel
                                 </a>
                                 <button type="submit"
-                                        class="inline-flex items-center gap-[7px] h-[46px] px-[22px] bg-[#16a34a] hover:bg-[#15a049] text-white rounded-[11px] font-bold text-[14px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_6px_14px_rgba(22,163,74,.2)]">
+                                        class="inline-flex items-center gap-[7px] h-[46px] px-[22px] bg-green-600 hover:bg-green-700 text-white rounded-[11px] font-bold text-[14px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_6px_14px_rgba(22,163,74,.2)]">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="20 6 9 17 4 12"></polyline>
                                     </svg>

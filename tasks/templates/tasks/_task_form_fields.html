@@ -6,7 +6,7 @@ textarea_class (set via {% with %} in the parent template).
 {% endcomment %}
 
 {% if form.non_field_errors %}
-<div class="rounded-[11px] border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#b91c1c]">
+<div class="rounded-[11px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
     {{ form.non_field_errors }}
 </div>
 {% endif %}
@@ -18,7 +18,7 @@ textarea_class (set via {% with %} in the parent template).
            value="{{ form.name.value|default_if_none:'' }}"
            maxlength="255" required
            placeholder="e.g. Draft initial designs"
-           class="{{ input_class }}{% if form.name.errors %} border-[#fca5a5]{% endif %}">
+           class="{{ input_class }}{% if form.name.errors %} border-red-300 dark:border-red-500/50{% endif %}">
     {% if form.name.errors %}<p class="{{ error_class }}">{{ form.name.errors.0 }}</p>{% endif %}
 </div>
 
@@ -29,7 +29,7 @@ textarea_class (set via {% with %} in the parent template).
               rows="3"
               maxlength="{{ form.description.field.max_length }}"
               placeholder="What needs to happen for this task to be done?"
-              class="{{ textarea_class }}{% if form.description.errors %} border-[#fca5a5]{% endif %}">{{ form.description.value|default_if_none:'' }}</textarea>
+              class="{{ textarea_class }}{% if form.description.errors %} border-red-300 dark:border-red-500/50{% endif %}">{{ form.description.value|default_if_none:'' }}</textarea>
     {% if form.description.errors %}<p class="{{ error_class }}">{{ form.description.errors.0 }}</p>{% endif %}
 </div>
 
@@ -44,21 +44,21 @@ by TaskForm._collect_tags on save.
             <input type="text" name="{{ form.tag_1.html_name }}" id="{{ form.tag_1.id_for_label }}"
                    value="{{ form.tag_1.value|default_if_none:'' }}"
                    maxlength="50" placeholder="Tag 1" aria-label="Tag 1 (optional)"
-                   class="{{ input_class }}{% if form.tag_1.errors %} border-[#fca5a5]{% endif %}">
+                   class="{{ input_class }}{% if form.tag_1.errors %} border-red-300 dark:border-red-500/50{% endif %}">
             {% if form.tag_1.errors %}<p class="{{ error_class }}">{{ form.tag_1.errors.0 }}</p>{% endif %}
         </div>
         <div>
             <input type="text" name="{{ form.tag_2.html_name }}" id="{{ form.tag_2.id_for_label }}"
                    value="{{ form.tag_2.value|default_if_none:'' }}"
                    maxlength="50" placeholder="Tag 2" aria-label="Tag 2 (optional)"
-                   class="{{ input_class }}{% if form.tag_2.errors %} border-[#fca5a5]{% endif %}">
+                   class="{{ input_class }}{% if form.tag_2.errors %} border-red-300 dark:border-red-500/50{% endif %}">
             {% if form.tag_2.errors %}<p class="{{ error_class }}">{{ form.tag_2.errors.0 }}</p>{% endif %}
         </div>
         <div>
             <input type="text" name="{{ form.tag_3.html_name }}" id="{{ form.tag_3.id_for_label }}"
                    value="{{ form.tag_3.value|default_if_none:'' }}"
                    maxlength="50" placeholder="Tag 3" aria-label="Tag 3 (optional)"
-                   class="{{ input_class }}{% if form.tag_3.errors %} border-[#fca5a5]{% endif %}">
+                   class="{{ input_class }}{% if form.tag_3.errors %} border-red-300 dark:border-red-500/50{% endif %}">
             {% if form.tag_3.errors %}<p class="{{ error_class }}">{{ form.tag_3.errors.0 }}</p>{% endif %}
         </div>
     </div>
@@ -71,7 +71,7 @@ by TaskForm._collect_tags on save.
     <div class="flex-1 min-w-[200px]">
         <label for="{{ form.priority.id_for_label }}" class="{{ label_class }}">Priority</label>
         <select name="{{ form.priority.html_name }}" id="{{ form.priority.id_for_label }}"
-                class="{{ input_class }}{% if form.priority.errors %} border-[#fca5a5]{% endif %}">
+                class="{{ input_class }}{% if form.priority.errors %} border-red-300 dark:border-red-500/50{% endif %}">
             {% for value, label in form.priority.field.choices %}
             <option value="{{ value }}"{% if form.priority.value|stringformat:"s" == value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
             {% endfor %}
@@ -84,7 +84,7 @@ by TaskForm._collect_tags on save.
         <label for="{{ form.due_date.id_for_label }}" class="{{ label_class }}">Due date</label>
         <input type="date" name="{{ form.due_date.html_name }}" id="{{ form.due_date.id_for_label }}"
                value="{{ form.due_date.value|default_if_none:'' }}"
-               class="{{ input_class }}{% if form.due_date.errors %} border-[#fca5a5]{% endif %}">
+               class="{{ input_class }}{% if form.due_date.errors %} border-red-300 dark:border-red-500/50{% endif %}">
         {% if form.due_date.errors %}<p class="{{ error_class }}">{{ form.due_date.errors.0 }}</p>{% endif %}
     </div>
 </div>

@@ -73,11 +73,11 @@ Both list pages expose a top search bar via GET `?q=`:
 
 | Page | Scope | Fields matched |
 | --- | --- | --- |
-| Home (`/`) | All projects | `name`, `description` (case-insensitive), exact `tags` |
-| Project detail (`/projects/<id>/`) | All tasks in that project | `name`, `description` (case-insensitive), exact `tags` |
+| Home (`/`) | All projects | `name`, `description` (substring + trigram fuzzy), `tags` (partial + fuzzy via `unnest`) |
+| Project detail (`/projects/<id>/`) | All tasks in that project | `name`, `description` (substring + trigram fuzzy), `tags` (partial + fuzzy via `unnest`) |
 
 **Tradeoff:** Home search does **not** surface a project when only a child task matches. Users open the project to search its tasks. This keeps the home bar scoped to projects and avoids `distinct()` joins across the task table.
 
-**Indexed columns:** GIN indexes on `tags` support exact tag lookup (`tags__contains=[term]`). B-tree indexes on `due_date` and `soonest_due_date` are reserved for the future due-date **Filter** UI (objectives #3), not the free-text search bar.
+**Indexed columns:** GIN trigram indexes (`gin_trgm_ops`) on `name` and `description` accelerate fuzzy lookups. GIN indexes on `tags` remain for array storage. Tag fuzzy matching unnests the array and uses `ILIKE` plus `similarity()` — it does not rely on the tags GIN index alone. B-tree indexes on `due_date` and `soonest_due_date` are reserved for the future due-date **Filter** UI (objectives #3), not the free-text search bar.
 
-**Query order:** Search filters run before heavier work — home applies search before live aggregates; project detail applies search before overdue partitioning and status grouping. That keeps work proportional to the narrowed row set.
+**Query order:** Search filters run before heavier work — home applies search before live aggregates; project detail applies search before overdue partitioning and status grouping. That keeps work proportional to the narrowed row set. Shared logic lives in `tasks/queries/fuzzy_search.py`.

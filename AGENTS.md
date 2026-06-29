@@ -21,4 +21,4 @@
 - `setup.sh` handles cross-distro PostgreSQL setup and reloads `.env.testing` at the end.
 - Single-user app per requirements (no user accounts or auth UI).
 - Tests use pytest in `tests/`; `conftest.py` loads `.env.testing` when vars are not exported.
-- Home `?q=` searches project name, description, and exact tags only (not child tasks); project detail `?q=` searches that project's tasks the same way.
+- Home `?q=` fuzzy-searches project name, description, and tags (partial + typo-tolerant); project detail `?q=` fuzzy-searches that project's tasks the same way. Neither searches child tasks from the home page.

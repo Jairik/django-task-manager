@@ -1,0 +1,28 @@
+{% comment %}
+Status-group container for the project detail task list. Expects `section`,
+`project`, `task_list_ui`, and optional `collapsed` (true for done/cancelled).
+
+All sections use <details> with a chevron header. Active sections (todo, in
+progress) pass collapsed=False so they render expanded (`open`) by default.
+{% endcomment %}
+{% load task_status_ui %}
+{% status_ui section.status as ui %}
+
+<details class="group/section mt-7 rounded-xl {{ ui.section_bg_classes }} p-3"{% if not collapsed %} open{% endif %}>
+    <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer mb-0 group-open/section:mb-3">
+        <div class="flex items-center gap-2">
+            <svg class="shrink-0 transition-transform group-open/section:rotate-180 text-slate-400 dark:text-slate-500" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <span class="w-[9px] h-[9px] rounded-full {{ ui.section_dot_classes }}"></span>
+            <span class="inline-flex items-center {{ ui.section_label_classes }}">{{ ui.icon_markup|status_icon }}</span>
+            <span class="text-xs font-extrabold uppercase tracking-[0.05em] {{ ui.section_label_classes }}">{{ section.label }}</span>
+            <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-md {{ ui.section_count_classes }}">{{ section.tasks|length }}</span>
+        </div>
+    </summary>
+    <div class="flex flex-col gap-2.5">
+        {% for task in section.tasks %}
+            {% include "projects/_task_row.html" with project=project is_manual_sort=task_list_ui.is_manual_sort %}
+        {% endfor %}
+    </div>
+</details>
