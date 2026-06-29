@@ -8,10 +8,10 @@ from tasks.models import Project
 class ProjectForm(forms.ModelForm):
     """Validate project fields and map up to three tag inputs to the tags array."""
 
-    # Tags live on the model as an ArrayField; use separate inputs in the UI.
-    tag_1 = forms.CharField(max_length=50, required=False, label="Tag 1")
-    tag_2 = forms.CharField(max_length=50, required=False, label="Tag 2")
-    tag_3 = forms.CharField(max_length=50, required=False, label="Tag 3")
+    # Tags live on the model as an ArrayField; the template groups them under one "tags" label.
+    tag_1 = forms.CharField(max_length=50, required=False, label="")
+    tag_2 = forms.CharField(max_length=50, required=False, label="")
+    tag_3 = forms.CharField(max_length=50, required=False, label="")
 
     class Meta:
         model = Project

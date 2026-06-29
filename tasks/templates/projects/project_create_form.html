@@ -1,14 +1,170 @@
-{# Minimal create-project form; replace with styled UI later. #}
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create Project — Task Manager</title>
 
-{% block title %}Create Project{% endblock %}
+    {% include "includes/theme_setup.html" %}
+</head>
 
-{% block content %}
-<h1>Create project</h1>
+<!-- Page background and base text color come from theme CSS variables. -->
+<body class="min-h-screen bg-[var(--page-bg)] font-sans antialiased text-[var(--text)]">
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">{{ submit_label }}</button>
-</form>
-{% endblock %}
+    <div class="min-h-screen py-9 px-7 box-border">
+
+        <!-- Centered app window — same max width, radius, border, and shadow as home. -->
+        <div class="w-full max-w-[1120px] mx-auto rounded-[18px] overflow-hidden border border-[var(--border-app)] shadow-[0_8px_30px_var(--shadow-app)]">
+
+            <!-- Top bar — app name links home; theme toggle persists via localStorage. -->
+            <header class="h-[52px] flex items-center justify-between px-6 bg-[var(--surface)] border-b border-[var(--border-light)]">
+                <a href="{% url 'home' %}" class="text-[14px] font-bold text-[var(--text)] tracking-[-0.015em] hover:text-[var(--text-muted)]">task manager</a>
+
+                {% include "includes/theme_header_toggle.html" %}
+            </header>
+
+            <!-- Form body — muted panel background like the home page content area. -->
+            <div class="p-[26px_28px_30px] bg-[var(--surface-muted)]">
+
+                <div class="max-w-[640px] mx-auto">
+
+                    <!-- Page heading above the form card. -->
+                    <h1 class="text-[22px] font-bold text-[var(--text)] tracking-[-0.02em] mb-[22px]">Create project</h1>
+
+                    <!-- Form card — same border/shadow treatment as project cards on home. -->
+                    <div class="bg-[var(--surface)] border border-[var(--border-card)] rounded-[15px] p-6 shadow-[0_1px_2px_var(--shadow-card),0_5px_14px_var(--shadow-card)]">
+
+                        <form method="post" novalidate class="space-y-5">
+                            {% csrf_token %}
+
+                            {% comment %}
+                            Shared input classes — mirror the search bar on home.html;
+                            colors use CSS variables so light/dark mode stays in sync.
+                            {% endcomment %}
+                            {% with input_class="w-full bg-[var(--surface)] border border-[var(--border)] rounded-[13px] px-[17px] h-[50px] shadow-[0_1px_2px_var(--shadow-card)] focus:border-[var(--border-focus)] focus:outline-none text-[15px] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)]" label_class="block text-[13px] font-semibold text-[var(--text-muted)] mb-1.5" error_class="mt-1 text-xs font-medium text-[#b91c1c]" textarea_class="w-full bg-[var(--surface)] border border-[var(--border)] rounded-[13px] px-[17px] py-3 shadow-[0_1px_2px_var(--shadow-card)] focus:border-[var(--border-focus)] focus:outline-none text-[15px] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)] resize-y min-h-[120px]" %}
+
+                            {% if form.non_field_errors %}
+                            <div class="rounded-[11px] border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#b91c1c]">
+                                {{ form.non_field_errors }}
+                            </div>
+                            {% endif %}
+
+                            <!-- Project name (required). -->
+                            <div>
+                                <label for="{{ form.name.id_for_label }}" class="{{ label_class }}">Name</label>
+                                <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}"
+                                       value="{{ form.name.value|default_if_none:'' }}"
+                                       maxlength="255" required
+                                       placeholder="Project name&hellip;"
+                                       class="{{ input_class }}{% if form.name.errors %} border-[#fca5a5]{% endif %}">
+                                {% if form.name.errors %}
+                                <p class="{{ error_class }}">{{ form.name.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Due date (optional). -->
+                            <div>
+                                <label for="{{ form.due_date.id_for_label }}" class="{{ label_class }}">Due date</label>
+                                <input type="date" name="{{ form.due_date.html_name }}" id="{{ form.due_date.id_for_label }}"
+                                       value="{{ form.due_date.value|default_if_none:'' }}"
+                                       class="{{ input_class }}{% if form.due_date.errors %} border-[#fca5a5]{% endif %}">
+                                {% if form.due_date.errors %}
+                                <p class="{{ error_class }}">{{ form.due_date.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Priority select — same height and border treatment as text inputs. -->
+                            <div>
+                                <label for="{{ form.priority.id_for_label }}" class="{{ label_class }}">Priority</label>
+                                <select name="{{ form.priority.html_name }}" id="{{ form.priority.id_for_label }}"
+                                        class="{{ input_class }}{% if form.priority.errors %} border-[#fca5a5]{% endif %}">
+                                    {% for value, label in form.priority.field.choices %}
+                                    <option value="{{ value }}"{% if form.priority.value|stringformat:"s" == value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.priority.errors %}
+                                <p class="{{ error_class }}">{{ form.priority.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Description (optional) — taller field for multi-line text. -->
+                            <div>
+                                <label for="{{ form.description.id_for_label }}" class="{{ label_class }}">Description</label>
+                                <textarea name="{{ form.description.html_name }}" id="{{ form.description.id_for_label }}"
+                                          rows="4"
+                                          placeholder="Optional project description&hellip;"
+                                          class="{{ textarea_class }}{% if form.description.errors %} border-[#fca5a5]{% endif %}">{{ form.description.value|default_if_none:'' }}</textarea>
+                                {% if form.description.errors %}
+                                <p class="{{ error_class }}">{{ form.description.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            {% comment %}
+                            Tags — one group label ("tags") and three optional inputs.
+                            Blank values are ignored by ProjectForm._collect_tags on save.
+                            {% endcomment %}
+                            <div>
+                                <span id="tags-label" class="{{ label_class }}">tags</span>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-labelledby="tags-label">
+
+                                    <div>
+                                        <input type="text" name="{{ form.tag_1.html_name }}" id="{{ form.tag_1.id_for_label }}"
+                                               value="{{ form.tag_1.value|default_if_none:'' }}"
+                                               maxlength="50"
+                                               placeholder="Tag 1"
+                                               aria-label="Tag 1 (optional)"
+                                               class="{{ input_class }}{% if form.tag_1.errors %} border-[#fca5a5]{% endif %}">
+                                        {% if form.tag_1.errors %}
+                                        <p class="{{ error_class }}">{{ form.tag_1.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <div>
+                                        <input type="text" name="{{ form.tag_2.html_name }}" id="{{ form.tag_2.id_for_label }}"
+                                               value="{{ form.tag_2.value|default_if_none:'' }}"
+                                               maxlength="50"
+                                               placeholder="Tag 2"
+                                               aria-label="Tag 2 (optional)"
+                                               class="{{ input_class }}{% if form.tag_2.errors %} border-[#fca5a5]{% endif %}">
+                                        {% if form.tag_2.errors %}
+                                        <p class="{{ error_class }}">{{ form.tag_2.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <div>
+                                        <input type="text" name="{{ form.tag_3.html_name }}" id="{{ form.tag_3.id_for_label }}"
+                                               value="{{ form.tag_3.value|default_if_none:'' }}"
+                                               maxlength="50"
+                                               placeholder="Tag 3"
+                                               aria-label="Tag 3 (optional)"
+                                               class="{{ input_class }}{% if form.tag_3.errors %} border-[#fca5a5]{% endif %}">
+                                        {% if form.tag_3.errors %}
+                                        <p class="{{ error_class }}">{{ form.tag_3.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% endwith %}
+
+                            <!-- Actions — primary submit matches the green "New" button on home. -->
+                            <div class="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+                                <a href="{% url 'home' %}"
+                                   class="flex-1 flex items-center justify-center bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text)] border border-[var(--border)] hover:border-[var(--border-focus)] rounded-[11px] h-[42px] font-bold text-[13.5px] shadow-[0_1px_2px_var(--shadow-card)]">
+                                    Cancel
+                                </a>
+                                <button type="submit"
+                                        class="flex-1 flex items-center justify-center gap-2 bg-[#16a34a] hover:bg-[#15a049] text-white rounded-[11px] h-[42px] font-bold text-[13.5px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_8px_18px_rgba(22,163,74,.22)]">
+                                    {{ submit_label }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "includes/theme_toggle.html" %}
+</body>
+</html>

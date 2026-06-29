@@ -1,0 +1,24 @@
+{% comment %}
+Header right-side light/dark segmented control. Pair with theme_setup.html and
+theme_toggle.html. Optional `header_link` block: pass True to wrap the app name
+in a link to home (used on inner pages like project create).
+{% endcomment %}
+
+<div class="flex items-center gap-[3px] bg-[var(--toggle-track)] border border-[var(--border)] rounded-[9px] p-[3px]">
+    <button type="button" id="theme-light" aria-label="Light theme" aria-pressed="true"
+            class="flex items-center justify-center w-7 h-[23px] rounded-md">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line>
+            <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line>
+            <line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line>
+            <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line>
+        </svg>
+    </button>
+    <button type="button" id="theme-dark" aria-label="Dark theme" aria-pressed="false"
+            class="flex items-center justify-center w-7 h-[23px] rounded-md">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#94a3b8">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path>
+        </svg>
+    </button>
+</div>

@@ -1,9 +1,188 @@
-{# Landing page; inherits shared layout from base.html. #}
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Task Manager</title>
 
-{% block title %}Task Manager{% endblock %}
+    {% include "includes/theme_setup.html" %}
+</head>
 
-{% block content %}
-<h1>Task Manager</h1>
-<p>Django app initialized.</p>
-{% endblock %}
+<!-- Page background and base text color come from theme CSS variables. -->
+<body class="min-h-screen bg-[var(--page-bg)] font-sans antialiased text-[var(--text)]">
+
+    <!-- Outer padding wrapper (36px top/bottom, 28px left/right). -->
+    <div class="min-h-screen py-9 px-7 box-border">
+
+        <!-- Centered "app window": capped width, rounded, subtle border + shadow. -->
+        <div class="w-full max-w-[1120px] mx-auto rounded-[18px] overflow-hidden border border-[var(--border-app)] shadow-[0_8px_30px_var(--shadow-app)]">
+
+            <!-- ============================================================
+                 TOP BAR: app name on the left, light/dark toggle on the right.
+                 Toggle adds/removes `dark` on <html> and persists to localStorage.
+                 ============================================================ -->
+            <header class="h-[52px] flex items-center justify-between px-6 bg-[var(--surface)] border-b border-[var(--border-light)]">
+                <span class="text-[14px] font-bold text-[var(--text)] tracking-[-0.015em]">task manager</span>
+
+                {% include "includes/theme_header_toggle.html" %}
+            </header>
+
+            <!-- ============================================================
+                 BODY: search bar + "New" action, then the project grid.
+                 ============================================================ -->
+            <div class="p-[26px_28px_30px] bg-[var(--surface-muted)]">
+
+                {% comment %}
+                Search row — GET form filtered by `?q=` on name, description, and
+                exact tag match. The input re-displays the current term via
+                {{ request.GET.q }}.
+                {% endcomment %}
+                <form method="get" action="{% url 'home' %}" class="flex gap-3 mb-[26px]">
+                    <div class="flex-1 flex items-center gap-[11px] bg-[var(--surface)] border border-[var(--border)] rounded-[13px] px-[17px] h-[50px] shadow-[0_1px_2px_var(--shadow-card)] focus-within:border-[var(--border-focus)]">
+                        <!-- Magnifying-glass icon. -->
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-subtle)" stroke-width="2" stroke-linecap="round">
+                            <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+                        </svg>
+                        <input type="search" name="q" value="{{ request.GET.q }}"
+                               placeholder="Search projects&hellip;"
+                               class="w-full bg-transparent outline-none text-[15px] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)]">
+                    </div>
+
+                    <!-- "New" links to the existing create-project route. Styled as a button. -->
+                    <a href="{% url 'project_create' %}"
+                       class="flex items-center gap-2 bg-[#16a34a] hover:bg-[#15a049] text-white rounded-[13px] h-[50px] px-6 font-bold text-[15px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_8px_18px_rgba(22,163,74,.22)]">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        New
+                    </a>
+                </form>
+
+                {% comment %}
+                Project grid — responsive auto-fit columns: cards are min 300px
+                wide and stretch to fill the row. The for-loop iterates the
+                `projects` context variable; the empty clause renders a friendly
+                empty state when there are no projects (none created, or none
+                matched the search).
+                {% endcomment %}
+                <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-[18px]">
+
+                    {% for project in projects %}
+                    <!-- ===================== PROJECT CARD ====================== -->
+                    <div class="bg-[var(--surface)] border border-[var(--border-card)] rounded-[15px] p-5 shadow-[0_1px_2px_var(--shadow-card),0_5px_14px_var(--shadow-card)]">
+
+                        <!-- Top row: tag badges (left) + priority badge (right). -->
+                        <div class="flex justify-between items-start gap-2 mb-[14px]">
+
+                            {% comment %}
+                            Tags come from the ArrayField (max 3). Colors are
+                            cycled for visual variety since tags are free-form
+                            strings with no fixed color mapping. To pin a specific
+                            color per tag name, replace the cycle below with a
+                            lookup (e.g. a custom template filter).
+                            {% endcomment %}
+                            <div class="flex gap-1.5 flex-wrap">
+                                {% for tag in project.tags %}
+                                <span class="text-[11px] font-semibold px-[9px] py-[3px] rounded-[7px] {% cycle 'bg-[#ede9fe] text-[#6d28d9]' 'bg-[#dbeafe] text-[#1d4ed8]' 'bg-[#cffafe] text-[#0e7490]' 'bg-[#fef3c7] text-[#b45309]' %}">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+
+                            {% comment %}
+                            Priority badge. The colored classes are chosen from the
+                            raw `priority` value; the inner dot reuses the text
+                            color via `bg-current`. very_high/high -> red,
+                            medium -> amber, low/very_low -> slate.
+                            {% endcomment %}
+                            <span class="shrink-0 inline-flex items-center gap-[5px] text-[10.5px] font-bold px-[9px] py-[3px] rounded-[7px] whitespace-nowrap
+                                {% if project.priority == 'high' or project.priority == 'very_high' %}bg-[#fee2e2] text-[#b91c1c]
+                                {% elif project.priority == 'medium' %}bg-[#fef3c7] text-[#b45309]
+                                {% else %}bg-[#e2e8f0] text-[#475569]{% endif %}">
+                                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>{{ project.get_priority_display }}
+                            </span>
+                        </div>
+
+                        <!-- Project name. -->
+                        <div class="text-[16px] font-bold text-[var(--text)] tracking-[-0.01em]">{{ project.name }}</div>
+
+                        {% comment %}
+                        Updated (relative) + Due date. `timesince` turns the
+                        DateTimeField into e.g. "2 hours". The date filter formats
+                        the due date like "Jul 10"; an em dash shows if unset.
+                        {% endcomment %}
+                        <div class="mt-1.5 flex justify-between items-baseline gap-2.5">
+                            <span class="text-xs text-[var(--text-subtle)] font-medium">Updated {{ project.updated_at|timesince }} ago</span>
+                            <span class="text-xs text-[var(--text-muted)] font-semibold">Due {% if project.due_date %}{{ project.due_date|date:"M j" }}{% else %}&mdash;{% endif %}</span>
+                        </div>
+
+                        {% comment %}
+                        "Soonest" callout: the next-due task and its date.
+                        `soonest_task` is a view-annotated string (task name);
+                        `soonest_due_date` is a real model field. The whole block
+                        is hidden when there is no upcoming task.
+                        {% endcomment %}
+                        {% if project.soonest_task %}
+                        <div class="mt-4 flex items-center gap-2 bg-[var(--surface-subtle)] border border-[var(--border-light)] rounded-[9px] px-[11px] py-[9px]">
+                            <svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="9"></circle><polyline points="12 7.5 12 12 15 13.5"></polyline>
+                            </svg>
+                            <span class="text-[11.5px] text-[var(--text-muted)] font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+                                <span class="text-[var(--text-subtle)] font-semibold">Soonest</span> &middot;
+                                <span class="text-[var(--text)] font-semibold">{{ project.soonest_task }}</span>
+                                {% if project.soonest_due_date %} &middot; {{ project.soonest_due_date|date:"M j" }}{% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        {% comment %}
+                        Progress percent + task count, then the progress bar.
+                        `progress`, `done_count`, and `task_count` are queryset
+                        annotations from the home view (one SQL query, no N+1).
+                        {% endcomment %}
+                        <div class="mt-4 flex justify-between items-baseline">
+                            <span class="text-[13px] font-bold text-[#16a34a]">{{ project.progress|default:0 }}%</span>
+                            <span class="text-xs font-semibold text-[var(--text-muted)]">{{ project.done_count|default:0 }}/{{ project.task_count }} tasks</span>
+                        </div>
+                        <div class="mt-2 h-[7px] bg-[var(--progress-track)] rounded-full overflow-hidden">
+                            <!-- Arbitrary Tailwind width avoids inline CSS (which breaks HTML/CSS linters). -->
+                            <div class="h-full bg-[#16a34a] rounded-full w-[{{ project.progress|default:0 }}%]"></div>
+                        </div>
+
+                        {% comment %}
+                        "Open project" — should point to the project-detail route.
+                        That URL does not exist yet, so this links to "#" for now;
+                        swap to the project-detail url (e.g. project_detail with
+                        project.pk) once that view/route is added.
+                        {% endcomment %}
+                        <a href="#"
+                           class="mt-[18px] w-full flex items-center justify-center gap-[7px] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text)] border border-[var(--border)] hover:border-[var(--border-focus)] rounded-[11px] h-[42px] font-bold text-[13.5px] shadow-[0_1px_2px_var(--shadow-card)]">
+                            Open project
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--icon-stroke)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="13 6 19 12 13 18"></polyline>
+                            </svg>
+                        </a>
+                    </div>
+                    <!-- =================== END PROJECT CARD ==================== -->
+
+                    {% empty %}
+                    <!-- Empty state — spans the full grid width. -->
+                    <div class="col-span-full bg-[var(--surface)] border border-dashed border-[var(--border-dashed)] rounded-[15px] p-10 text-center">
+                        <p class="text-[15px] font-semibold text-[var(--text)]">No projects yet</p>
+                        <p class="mt-1 text-[13px] text-[var(--text-muted)]">Create your first project to get started.</p>
+                        <a href="{% url 'project_create' %}"
+                           class="inline-flex items-center gap-2 mt-4 bg-[#16a34a] hover:bg-[#15a049] text-white rounded-[11px] h-[42px] px-5 font-bold text-[13.5px]">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            New project
+                        </a>
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "includes/theme_toggle.html" %}
+</body>
+</html>

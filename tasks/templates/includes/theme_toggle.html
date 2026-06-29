@@ -1,0 +1,32 @@
+{% comment %}
+Light/dark segmented control for standalone pages. Requires #theme-light and
+#theme-dark buttons in the header. Include once before </body>.
+{% endcomment %}
+
+<!-- Theme toggle: persist choice and sync aria-pressed on the segmented control. -->
+<script>
+    (function () {
+        var lightBtn = document.getElementById('theme-light');
+        var darkBtn = document.getElementById('theme-dark');
+
+        /** Reflect the current theme on the sun/moon buttons for assistive tech. */
+        function updateToggleUI(isDark) {
+            lightBtn.setAttribute('aria-pressed', isDark ? 'false' : 'true');
+            darkBtn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+        }
+
+        /** Apply theme, persist to localStorage, and refresh toggle state. */
+        function setTheme(theme) {
+            var isDark = theme === 'dark';
+            document.documentElement.classList.toggle('dark', isDark);
+            localStorage.setItem('theme', theme);
+            updateToggleUI(isDark);
+        }
+
+        // Initial button state matches the class applied in theme_setup.html.
+        updateToggleUI(document.documentElement.classList.contains('dark'));
+
+        lightBtn.addEventListener('click', function () { setTheme('light'); });
+        darkBtn.addEventListener('click', function () { setTheme('dark'); });
+    })();
+</script>

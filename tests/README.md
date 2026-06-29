@@ -1,6 +1,6 @@
 # Automated Tests
 
-Pytest suite for the django-task-manager project.
+Pytest suite for the django-task-manager project. This is maintained entirely by LLMs.
 
 ## Run instructions
 
