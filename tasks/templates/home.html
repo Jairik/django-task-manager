@@ -159,6 +159,10 @@
                     {% empty %}
                     <!-- Empty state — spans the full grid width. -->
                     <div class="col-span-full bg-[var(--surface)] border border-dashed border-[var(--border-dashed)] rounded-[15px] p-10 text-center">
+                        {% if request.GET.q %}
+                        <p class="text-[15px] font-semibold text-[var(--text)]">No projects match your search</p>
+                        <p class="mt-1 text-[13px] text-[var(--text-muted)]">Try a different term or clear the search box.</p>
+                        {% else %}
                         <p class="text-[15px] font-semibold text-[var(--text)]">No projects yet</p>
                         <p class="mt-1 text-[13px] text-[var(--text-muted)]">Create your first project to get started.</p>
                         <a href="{% url 'project_create' %}"
@@ -168,6 +172,7 @@
                             </svg>
                             New project
                         </a>
+                        {% endif %}
                     </div>
                     {% endfor %}
 

@@ -66,3 +66,18 @@ Centralize updates in one service layer function so counts and soonest fields st
 3. **If the list grows large:** paginate first; denormalize counts and soonest task name second.
 
 This progression keeps the first implementation simple while documenting a clear path if performance becomes a concern.
+
+## Search
+
+Both list pages expose a top search bar via GET `?q=`:
+
+| Page | Scope | Fields matched |
+| --- | --- | --- |
+| Home (`/`) | All projects | `name`, `description` (case-insensitive), exact `tags` |
+| Project detail (`/projects/<id>/`) | All tasks in that project | `name`, `description` (case-insensitive), exact `tags` |
+
+**Tradeoff:** Home search does **not** surface a project when only a child task matches. Users open the project to search its tasks. This keeps the home bar scoped to projects and avoids `distinct()` joins across the task table.
+
+**Indexed columns:** GIN indexes on `tags` support exact tag lookup (`tags__contains=[term]`). B-tree indexes on `due_date` and `soonest_due_date` are reserved for the future due-date **Filter** UI (objectives #3), not the free-text search bar.
+
+**Query order:** Search filters run before heavier work — home applies search before live aggregates; project detail applies search before overdue partitioning and status grouping. That keeps work proportional to the narrowed row set.

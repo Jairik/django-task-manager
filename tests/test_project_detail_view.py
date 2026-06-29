@@ -9,12 +9,14 @@ from tasks.models import Priority, Project, Task, TaskStatus
 from tasks.queries import (
     advance_task_status,
     build_task_status_sections,
-    cancel_task,
+    revert_task_to_todo,
     create_task_for_project,
+    delete_project,
     delete_task_for_project,
     get_next_task_status,
     get_project_tasks,
     partition_overdue_tasks,
+    update_project,
     update_task_for_project,
 )
 
@@ -109,6 +111,89 @@ def test_project_detail_empty_state(client: Client) -> None:
     assert response.status_code == 200
     content = response.content.decode()
     assert "No tasks yet" in content
+
+
+@pytest.mark.django_db
+def test_project_detail_search_by_name(client: Client) -> None:
+    """Search filters tasks by partial name match."""
+    project = Project.objects.create(name="Search board")
+    Task.objects.create(project=project, name="Deploy release", status=TaskStatus.TODO)
+    Task.objects.create(project=project, name="Write docs", status=TaskStatus.TODO)
+
+    response = client.get(f"/projects/{project.pk}/", {"q": "deploy"})
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Deploy release" in content
+    assert "Write docs" not in content
+
+
+@pytest.mark.django_db
+def test_project_detail_search_by_description(client: Client) -> None:
+    """Search filters tasks by partial description match."""
+    project = Project.objects.create(name="Description search")
+    Task.objects.create(
+        project=project,
+        name="Task A",
+        description="Review retention policy",
+        status=TaskStatus.TODO,
+    )
+    Task.objects.create(
+        project=project,
+        name="Task B",
+        description="Unrelated notes",
+        status=TaskStatus.TODO,
+    )
+
+    response = client.get(f"/projects/{project.pk}/", {"q": "retention"})
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Task A" in content
+    assert "Task B" not in content
+
+
+@pytest.mark.django_db
+def test_project_detail_search_by_tag(client: Client) -> None:
+    """Search matches an exact tag string; partial tag text alone is not enough."""
+    project = Project.objects.create(name="Tag search")
+    # Name deliberately avoids "backend" so a partial tag query cannot match via name.
+    Task.objects.create(
+        project=project,
+        name="API refactor",
+        tags=["backend"],
+        status=TaskStatus.TODO,
+    )
+    Task.objects.create(
+        project=project,
+        name="UI polish",
+        tags=["frontend"],
+        status=TaskStatus.TODO,
+    )
+
+    exact_match = client.get(f"/projects/{project.pk}/", {"q": "backend"})
+    partial_match = client.get(f"/projects/{project.pk}/", {"q": "back"})
+
+    exact_content = exact_match.content.decode()
+    partial_content = partial_match.content.decode()
+
+    assert "API refactor" in exact_content
+    assert "UI polish" not in exact_content
+    assert "API refactor" not in partial_content
+
+
+@pytest.mark.django_db
+def test_project_detail_search_empty_state(client: Client) -> None:
+    """A search with no matches shows the no-results empty state."""
+    project = Project.objects.create(name="Filtered board")
+    Task.objects.create(project=project, name="Visible task", status=TaskStatus.TODO)
+
+    response = client.get(f"/projects/{project.pk}/", {"q": "nomatch"})
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "No tasks match your search" in content
+    assert "Visible task" not in content
 
 
 @pytest.mark.django_db
@@ -437,38 +522,6 @@ def test_advance_task_status_is_noop_when_cancelled() -> None:
     assert task.status == TaskStatus.CANCELLED
 
 
-@pytest.mark.parametrize(
-    "initial_status",
-    [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE],
-)
-@pytest.mark.django_db
-def test_cancel_task_sets_cancelled(initial_status: TaskStatus) -> None:
-    """Cancel moves open or done tasks into the cancelled state."""
-    project = Project.objects.create(name="Cancel path")
-    task = Task.objects.create(project=project, name="Stop", status=initial_status)
-
-    cancel_task(task)
-    task.refresh_from_db()
-
-    assert task.status == TaskStatus.CANCELLED
-
-
-@pytest.mark.django_db
-def test_cancel_task_is_noop_when_already_cancelled() -> None:
-    """Cancelling an already-cancelled task does not error."""
-    project = Project.objects.create(name="Cancel noop")
-    task = Task.objects.create(
-        project=project,
-        name="Already stopped",
-        status=TaskStatus.CANCELLED,
-    )
-
-    cancel_task(task)
-    task.refresh_from_db()
-
-    assert task.status == TaskStatus.CANCELLED
-
-
 @pytest.mark.django_db
 def test_task_advance_view_redirects_and_updates_status(client: Client) -> None:
     """POSTing the advance endpoint moves the task and returns to project detail."""
@@ -484,17 +537,72 @@ def test_task_advance_view_redirects_and_updates_status(client: Client) -> None:
 
 
 @pytest.mark.django_db
-def test_task_cancel_view_redirects_and_cancels(client: Client) -> None:
-    """POSTing the cancel endpoint marks the task cancelled and redirects back."""
-    project = Project.objects.create(name="Cancel view")
-    task = Task.objects.create(project=project, name="Drop it", status=TaskStatus.IN_PROGRESS)
+def test_revert_task_to_todo_moves_done_to_todo() -> None:
+    """Reverting a done task moves it back to todo."""
+    project = Project.objects.create(name="Revert path")
+    task = Task.objects.create(project=project, name="Finished", status=TaskStatus.DONE)
 
-    response = client.post(f"/projects/{project.pk}/tasks/{task.pk}/cancel/")
+    revert_task_to_todo(task)
+    task.refresh_from_db()
+
+    assert task.status == TaskStatus.TODO
+
+
+@pytest.mark.parametrize(
+    "initial_status",
+    [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED],
+)
+@pytest.mark.django_db
+def test_revert_task_to_todo_is_noop_when_not_done(initial_status: TaskStatus) -> None:
+    """Only done tasks are reverted; other statuses are left unchanged."""
+    project = Project.objects.create(name="Revert noop")
+    task = Task.objects.create(project=project, name="Stay put", status=initial_status)
+
+    revert_task_to_todo(task)
+    task.refresh_from_db()
+
+    assert task.status == initial_status
+
+
+@pytest.mark.django_db
+def test_task_revert_view_redirects_and_reverts(client: Client) -> None:
+    """POSTing the revert endpoint moves a done task to todo and redirects back."""
+    project = Project.objects.create(name="Revert view")
+    task = Task.objects.create(project=project, name="Reopen me", status=TaskStatus.DONE)
+
+    response = client.post(f"/projects/{project.pk}/tasks/{task.pk}/revert/")
 
     assert response.status_code == 302
     assert response["Location"] == f"/projects/{project.pk}/"
     task.refresh_from_db()
-    assert task.status == TaskStatus.CANCELLED
+    assert task.status == TaskStatus.TODO
+
+
+@pytest.mark.django_db
+def test_task_revert_view_returns_404_for_wrong_project(client: Client) -> None:
+    """Revert rejects tasks that do not belong to the URL project."""
+    project_a = Project.objects.create(name="Project A")
+    project_b = Project.objects.create(name="Project B")
+    task = Task.objects.create(project=project_a, name="Wrong board", status=TaskStatus.DONE)
+
+    response = client.post(f"/projects/{project_b.pk}/tasks/{task.pk}/revert/")
+
+    assert response.status_code == 404
+    task.refresh_from_db()
+    assert task.status == TaskStatus.DONE
+
+
+@pytest.mark.django_db
+def test_task_revert_view_rejects_get(client: Client) -> None:
+    """GET requests to the revert endpoint are not allowed."""
+    project = Project.objects.create(name="GET guard")
+    task = Task.objects.create(project=project, name="No GET", status=TaskStatus.DONE)
+
+    response = client.get(f"/projects/{project.pk}/tasks/{task.pk}/revert/")
+
+    assert response.status_code == 405
+    task.refresh_from_db()
+    assert task.status == TaskStatus.DONE
 
 
 @pytest.mark.django_db
@@ -649,3 +757,108 @@ def test_task_delete_view_returns_404_for_wrong_project(client: Client) -> None:
 
     assert response.status_code == 404
     assert Task.objects.filter(pk=task.pk).exists()
+
+
+@pytest.mark.django_db
+def test_delete_project_cascades_tasks() -> None:
+    """Deleting a project removes its child tasks via CASCADE."""
+    project = Project.objects.create(name="Cascade")
+    task = Task.objects.create(project=project, name="Child", status=TaskStatus.TODO)
+    project_pk = project.pk
+    task_pk = task.pk
+
+    delete_project(project)
+
+    assert not Project.objects.filter(pk=project_pk).exists()
+    assert not Task.objects.filter(pk=task_pk).exists()
+
+
+@pytest.mark.django_db
+def test_update_project_persists_field_changes() -> None:
+    """The update helper saves project field changes."""
+    project = Project.objects.create(name="Before", priority=Priority.LOW)
+
+    project.name = "After"
+    project.priority = Priority.HIGH
+    update_project(project)
+    project.refresh_from_db()
+
+    assert project.name == "After"
+    assert project.priority == Priority.HIGH
+
+
+@pytest.mark.django_db
+def test_project_edit_view_get_shows_form(client: Client) -> None:
+    """GET on the edit page renders the form with the project name."""
+    project = Project.objects.create(name="Show form")
+
+    response = client.get(f"/projects/{project.pk}/edit/")
+
+    assert response.status_code == 200
+    assert b"Edit project" in response.content
+    assert b"Show form" in response.content
+
+
+@pytest.mark.django_db
+def test_project_edit_view_saves_changes(client: Client) -> None:
+    """POSTing the edit form updates the project and returns to project detail."""
+    project = Project.objects.create(
+        name="Before",
+        description="Old body",
+        priority=Priority.LOW,
+    )
+
+    response = client.post(
+        f"/projects/{project.pk}/edit/",
+        {
+            "name": "Renamed",
+            "description": "New body",
+            "priority": Priority.HIGH,
+            "due_date": "2026-12-01",
+            "tag_1": "alpha",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response["Location"] == f"/projects/{project.pk}/"
+    project.refresh_from_db()
+    assert project.name == "Renamed"
+    assert project.description == "New body"
+    assert project.priority == Priority.HIGH
+    assert project.due_date == date(2026, 12, 1)
+    assert project.tags == ["alpha"]
+
+
+@pytest.mark.django_db
+def test_project_edit_view_rejects_invalid_data(client: Client) -> None:
+    """Invalid edit submissions re-render the form with errors."""
+    project = Project.objects.create(name="Keep name")
+
+    response = client.post(
+        f"/projects/{project.pk}/edit/",
+        {
+            "name": "",
+            "description": "",
+            "priority": Priority.LOW,
+        },
+    )
+
+    assert response.status_code == 200
+    project.refresh_from_db()
+    assert project.name == "Keep name"
+
+
+@pytest.mark.django_db
+def test_project_delete_view_removes_project(client: Client) -> None:
+    """POSTing the delete endpoint removes the project and redirects home."""
+    project = Project.objects.create(name="Delete view")
+    task = Task.objects.create(project=project, name="Child task")
+    project_pk = project.pk
+    task_pk = task.pk
+
+    response = client.post(f"/projects/{project_pk}/delete/")
+
+    assert response.status_code == 302
+    assert response["Location"] == "/"
+    assert not Project.objects.filter(pk=project_pk).exists()
+    assert not Task.objects.filter(pk=task_pk).exists()

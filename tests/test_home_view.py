@@ -61,6 +61,20 @@ def test_home_search_by_tag(client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_home_search_by_description(client: Client) -> None:
+    """Search filters projects by partial description match."""
+    Project.objects.create(name="Alpha", description="Quarterly roadmap planning")
+    Project.objects.create(name="Beta", description="Unrelated cleanup work")
+
+    response = client.get("/", {"q": "roadmap"})
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Alpha" in content
+    assert "Beta" not in content
+
+
+@pytest.mark.django_db
 def test_home_annotations(client: Client) -> None:
     """Home page shows progress, task counts, and soonest task from annotations."""
     project = Project.objects.create(name="Ship feature")

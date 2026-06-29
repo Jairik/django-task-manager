@@ -112,15 +112,16 @@ def advance_task_status(task: Task) -> Task:
     return task
 
 
-def cancel_task(task: Task) -> Task:
-    """Mark a task as cancelled.
+def revert_task_to_todo(task: Task) -> Task:
+    """Move a completed task back to ``todo``.
 
-    Idempotent when the task is already ``cancelled`` (no save).
+    Only ``done`` tasks are reverted; other statuses are left unchanged (no save).
+    Status-only changes do not refresh ``soonest_due_date``.
     """
-    if task.status == TaskStatus.CANCELLED:
+    if task.status != TaskStatus.DONE:
         return task
 
-    task.status = TaskStatus.CANCELLED
+    task.status = TaskStatus.TODO
     task.save(update_fields=["status", "updated_at"])
     return task
 
@@ -128,10 +129,10 @@ def cancel_task(task: Task) -> Task:
 def get_project_tasks(project_id: int, search: str = "") -> QuerySet[Task]:
     """Return tasks for a project, optionally filtered by search term.
 
-  Search matches task name, description (case-insensitive), or an exact tag
-  string in the PostgreSQL tags array. Uses task_project_id_idx for project
-  scope and task_tags_gin_idx for tag lookup. Tasks are sorted by due date
-  (nulls last), then name, then primary key as a stable tiebreaker.
+    Search matches task name, description (case-insensitive), or an exact tag
+    string in the PostgreSQL tags array. Uses task_project_id_idx for project
+    scope and task_tags_gin_idx for tag lookup. Tasks are sorted by due date
+    (nulls last), then name, then primary key as a stable tiebreaker.
     """
     queryset = Task.objects.filter(project_id=project_id)
 

@@ -14,10 +14,11 @@
 - Stack: Django 5.x, PostgreSQL (`psycopg`), Tailwind via Play CDN (no Tailwind build step yet).
 - Run Django with `uv run python manage.py`; README also documents a standard venv path.
 - PostgreSQL connection uses `POSTGRES_*` env vars; defaults live in `.env.testing`.
-- Database schema is documented in `docs/schema.md` and should stay in sync with `tasks/models.py`.
-- Views live in `tasks/views/`; forms live in `tasks/forms/` (package layout, not monolithic files).
-- `tasks/templates/home.html` is standalone and does not extend `base.html`.
+- Database schema in `docs/schema.md` (sync with `tasks/models.py`); `docs/scalingConcerns.md` documents read-path performance and search behavior.
+- Views in `tasks/views/`, forms in `tasks/forms/`, read-side queries in `tasks/queries/` (home list, project tasks, task writes).
+- Standalone pages (`home.html`, project detail, project/task forms) do not extend `base.html`; light/dark theme via `tasks/templates/includes/theme_*.html`.
 - Commit Django migrations under `tasks/migrations/`; do not gitignore them.
 - `setup.sh` handles cross-distro PostgreSQL setup and reloads `.env.testing` at the end.
 - Single-user app per requirements (no user accounts or auth UI).
 - Tests use pytest in `tests/`; `conftest.py` loads `.env.testing` when vars are not exported.
+- Home `?q=` searches project name, description, and exact tags only (not child tasks); project detail `?q=` searches that project's tasks the same way.
