@@ -1,15 +1,23 @@
-"""Django settings for the task manager project."""
+"""Django settings for the task manager project.
 
+Connection details for PostgreSQL are read from environment variables so
+credentials are not hard-coded. See `.env.testing` for local defaults.
+"""
+
+import os
 from pathlib import Path
 
+# Absolute path to the project root (one level above this config package).
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Development-only secret; replace before any production deployment.
 SECRET_KEY = "django-insecure-dev-only-change-before-production"
 
 DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Django built-in apps plus our task management app.
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -20,6 +28,7 @@ INSTALLED_APPS = [
     "tasks",
 ]
 
+# Request/response pipeline executed in order for every HTTP request.
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -32,6 +41,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
+# APP_DIRS=True lets each app load templates from its own templates/ folder.
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -49,10 +59,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+# PostgreSQL connection; each value falls back to a sensible local default.
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "task_manager"),
+        "USER": os.environ.get("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
+        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 

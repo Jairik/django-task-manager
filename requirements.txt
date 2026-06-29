@@ -1,1 +1,5 @@
+# Pip/venv fallback. uv users should install from pyproject.toml via `uv sync`.
+# Web framework
 Django>=5.1,<6
+# PostgreSQL adapter used by django.db.backends.postgresql
+psycopg[binary]>=3.2,<4

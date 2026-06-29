@@ -4,15 +4,15 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
-env/
 
 # Django
-db.sqlite3
+db.sqlite3  # legacy SQLite file; project now uses PostgreSQL
 *.log
 staticfiles/
 
 # Editor / OS
-.env
 .DS_Store
 .idea/
-.vscode/
+# **.cursor/
+**.claude/
+**.codex/
