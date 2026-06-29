@@ -11,9 +11,9 @@ def project_create(request):
         form = ProjectForm(request.POST)
 
         if form.is_valid():
-            form.save()
-            # Replace with project detail redirect once that view exists.
-            return redirect("home")
+            project = form.save()
+            # Land on the new project's detail page so its tasks can be added.
+            return redirect("project_detail", pk=project.pk)
     else:
         form = ProjectForm()
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Create Project — Task Manager</title>
+    <title>New Task — {{ project.name }}</title>
 
     {% include "includes/theme_setup.html" %}
 </head>
@@ -13,7 +13,7 @@
 
     <div class="min-h-screen py-9 px-7 box-border">
 
-        <!-- Centered app window — same max width, radius, border, and shadow as home. -->
+        <!-- Centered app window — same shell as the other pages. -->
         <div class="w-full max-w-[1120px] mx-auto rounded-[18px] overflow-hidden border border-[var(--border-app)] shadow-[0_8px_30px_var(--shadow-app)]">
 
             <!-- Top bar — app name links home; theme toggle persists via localStorage. -->
@@ -23,36 +23,37 @@
                 {% include "includes/theme_header_toggle.html" %}
             </header>
 
-            <!-- Form body — muted panel background like the home page content area. -->
+            <!-- Form body — muted panel background like the other pages. -->
             <div class="p-[30px_28px_36px] bg-[var(--surface-muted)]">
 
                 <div class="w-full max-w-[660px] mx-auto">
 
-                    <!-- Back link to the project grid. -->
-                    <a href="{% url 'home' %}"
+                    <!-- Back link to the parent project. -->
+                    <a href="{% url 'project_detail' project.pk %}"
                        class="inline-flex items-center gap-1.5 mb-[18px] text-[13px] font-semibold text-[var(--text-muted)] hover:text-[var(--text)]">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="11 18 5 12 11 6"></polyline>
                         </svg>
-                        Back to projects
+                        Back to project
                     </a>
 
                     <!-- Form card — header / body / footer sections mirror the artifact. -->
                     <div class="bg-[var(--surface)] border border-[var(--border-card)] rounded-[16px] overflow-hidden shadow-[0_1px_2px_var(--shadow-card),0_6px_18px_var(--shadow-card)]">
 
-                        <!-- Card header: title + supporting line. -->
+                        <!-- Card header: title + the project this task joins (starts in "To do"). -->
                         <div class="p-[24px_28px_20px] border-b border-[var(--border-light)]">
-                            <div class="text-[20px] font-extrabold text-[var(--text)] tracking-[-0.02em]">New project</div>
-                            <div class="mt-1 text-[13px] font-medium text-[var(--text-subtle)]">Set up the basics — you can refine tasks later.</div>
+                            <div class="text-[20px] font-extrabold text-[var(--text)] tracking-[-0.02em]">New task</div>
+                            <div class="mt-1 text-[13px] font-medium text-[var(--text-subtle)]">
+                                Adding to <span class="text-[var(--text-muted)] font-bold">{{ project.name }}</span> — starts in <span class="text-[#2563eb] font-bold">To do</span>.
+                            </div>
                         </div>
 
                         <form method="post" novalidate>
                             {% csrf_token %}
 
                             {% comment %}
-                            Shared field classes — inputs match the artifact's form controls
-                            (48px tall, green focus ring); colors use CSS variables so
-                            light/dark mode stays in sync.
+                            Shared field classes — match the create-project form so both
+                            screens feel identical; colors use CSS variables for theming.
                             {% endcomment %}
                             {% with input_class="w-full box-border h-[48px] bg-[var(--surface)] border border-[var(--border)] rounded-[11px] px-[14px] text-[15px] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:border-[#16a34a] focus:shadow-[0_0_0_3px_rgba(22,163,74,.12)] focus:outline-none" label_class="block text-[12.5px] font-bold text-[var(--text-muted)] mb-2" error_class="mt-1 text-xs font-medium text-[#b91c1c]" textarea_class="w-full box-border bg-[var(--surface)] border border-[var(--border)] rounded-[11px] px-[14px] py-[11px] text-[14.5px] leading-[1.5] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:border-[#16a34a] focus:shadow-[0_0_0_3px_rgba(22,163,74,.12)] focus:outline-none resize-y min-h-[96px]" %}
 
@@ -65,22 +66,30 @@
                                 </div>
                                 {% endif %}
 
-                                <!-- Project name (required). -->
+                                <!-- Task name (required). -->
                                 <div>
-                                    <label for="{{ form.name.id_for_label }}" class="{{ label_class }}">Project name</label>
+                                    <label for="{{ form.name.id_for_label }}" class="{{ label_class }}">Task name</label>
                                     <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}"
                                            value="{{ form.name.value|default_if_none:'' }}"
                                            maxlength="255" required
-                                           placeholder="e.g. Mobile App Redesign"
+                                           placeholder="e.g. Draft initial designs"
                                            class="{{ input_class }}{% if form.name.errors %} border-[#fca5a5]{% endif %}">
-                                    {% if form.name.errors %}
-                                    <p class="{{ error_class }}">{{ form.name.errors.0 }}</p>
-                                    {% endif %}
+                                    {% if form.name.errors %}<p class="{{ error_class }}">{{ form.name.errors.0 }}</p>{% endif %}
+                                </div>
+
+                                <!-- Description (optional). -->
+                                <div>
+                                    <label for="{{ form.description.id_for_label }}" class="{{ label_class }}">Description</label>
+                                    <textarea name="{{ form.description.html_name }}" id="{{ form.description.id_for_label }}"
+                                              rows="3"
+                                              placeholder="What needs to happen for this task to be done?"
+                                              class="{{ textarea_class }}{% if form.description.errors %} border-[#fca5a5]{% endif %}">{{ form.description.value|default_if_none:'' }}</textarea>
+                                    {% if form.description.errors %}<p class="{{ error_class }}">{{ form.description.errors.0 }}</p>{% endif %}
                                 </div>
 
                                 {% comment %}
                                 Tags — one group label and three optional inputs. Blank
-                                values are ignored by ProjectForm._collect_tags on save.
+                                values are ignored by TaskForm._collect_tags on save.
                                 {% endcomment %}
                                 <div>
                                     <span id="tags-label" class="{{ label_class }}">Tags</span>
@@ -133,23 +142,13 @@
                                         {% if form.due_date.errors %}<p class="{{ error_class }}">{{ form.due_date.errors.0 }}</p>{% endif %}
                                     </div>
                                 </div>
-
-                                <!-- Description (optional) — taller field for multi-line text. -->
-                                <div>
-                                    <label for="{{ form.description.id_for_label }}" class="{{ label_class }}">Description</label>
-                                    <textarea name="{{ form.description.html_name }}" id="{{ form.description.id_for_label }}"
-                                              rows="3"
-                                              placeholder="Optional project description&hellip;"
-                                              class="{{ textarea_class }}{% if form.description.errors %} border-[#fca5a5]{% endif %}">{{ form.description.value|default_if_none:'' }}</textarea>
-                                    {% if form.description.errors %}<p class="{{ error_class }}">{{ form.description.errors.0 }}</p>{% endif %}
-                                </div>
                             </div>
 
                             {% endwith %}
 
                             <!-- Card footer: actions on a muted strip, primary on the right. -->
                             <div class="p-[18px_28px] bg-[var(--surface-muted)] border-t border-[var(--border-light)] flex justify-end gap-2.5">
-                                <a href="{% url 'home' %}"
+                                <a href="{% url 'project_detail' project.pk %}"
                                    class="inline-flex items-center h-[46px] px-5 bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text-muted)] border border-[var(--border)] rounded-[11px] font-bold text-[14px]">
                                     Cancel
                                 </a>

@@ -75,15 +75,13 @@
                         <div class="flex justify-between items-start gap-2 mb-[14px]">
 
                             {% comment %}
-                            Tags come from the ArrayField (max 3). Colors are
-                            cycled for visual variety since tags are free-form
-                            strings with no fixed color mapping. To pin a specific
-                            color per tag name, replace the cycle below with a
-                            lookup (e.g. a custom template filter).
+                            Tags come from the ArrayField (max 3). They render in
+                            a uniform slate gray since tags are free-form strings
+                            with no fixed color mapping.
                             {% endcomment %}
                             <div class="flex gap-1.5 flex-wrap">
                                 {% for tag in project.tags %}
-                                <span class="text-[11px] font-semibold px-[9px] py-[3px] rounded-[7px] {% cycle 'bg-[#ede9fe] text-[#6d28d9]' 'bg-[#dbeafe] text-[#1d4ed8]' 'bg-[#cffafe] text-[#0e7490]' 'bg-[#fef3c7] text-[#b45309]' %}">{{ tag }}</span>
+                                <span class="text-[11px] font-semibold px-[9px] py-[3px] rounded-[7px] bg-[#e2e8f0] text-[#475569]">{{ tag }}</span>
                                 {% endfor %}
                             </div>
 
@@ -147,13 +145,8 @@
                             <div class="h-full bg-[#16a34a] rounded-full w-[{{ project.progress|default:0 }}%]"></div>
                         </div>
 
-                        {% comment %}
-                        "Open project" — should point to the project-detail route.
-                        That URL does not exist yet, so this links to "#" for now;
-                        swap to the project-detail url (e.g. project_detail with
-                        project.pk) once that view/route is added.
-                        {% endcomment %}
-                        <a href="#"
+                        <!-- "Open project" links to this project's detail page. -->
+                        <a href="{% url 'project_detail' project.pk %}"
                            class="mt-[18px] w-full flex items-center justify-center gap-[7px] bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text)] border border-[var(--border)] hover:border-[var(--border-focus)] rounded-[11px] h-[42px] font-bold text-[13.5px] shadow-[0_1px_2px_var(--shadow-card)]">
                             Open project
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--icon-stroke)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">

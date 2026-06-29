@@ -6,11 +6,13 @@ docs/scalingConcerns.md).
 """
 
 from collections.abc import Iterable
+from datetime import date
 from typing import Any
 
-from django.db.models import F, QuerySet
+from django.db.models import F, Min, QuerySet
+from django.utils import timezone
 
-from tasks.models import Task, TaskStatus
+from tasks.models import Project, Task, TaskStatus
 
 # Fixed section order for the project detail template (todo → cancelled).
 TASK_STATUS_SECTION_ORDER: tuple[TaskStatus, ...] = (
@@ -19,6 +21,38 @@ TASK_STATUS_SECTION_ORDER: tuple[TaskStatus, ...] = (
     TaskStatus.DONE,
     TaskStatus.CANCELLED,
 )
+
+# Open statuses eligible for the overdue bucket on the project detail page.
+_OPEN_STATUSES: frozenset[TaskStatus] = frozenset(
+    {TaskStatus.TODO, TaskStatus.IN_PROGRESS}
+)
+
+
+def refresh_project_soonest_due_date(project: Project) -> None:
+    """Recompute ``Project.soonest_due_date`` from dated tasks under the project.
+
+    Uses the earliest non-null task ``due_date`` (see docs/schema.md). Sets the
+    field to ``None`` when the project has no dated tasks.
+    """
+    soonest_due_date = (
+        Task.objects.filter(project_id=project.pk, due_date__isnull=False)
+        .aggregate(soonest=Min("due_date"))
+        .get("soonest")
+    )
+
+    project.soonest_due_date = soonest_due_date
+    project.save(update_fields=["soonest_due_date", "updated_at"])
+
+
+def create_task_for_project(task: Task) -> Task:
+    """Persist a new task and refresh the parent project's ``soonest_due_date``.
+
+    The caller must set ``task.project`` and build field values (e.g. from
+    ``TaskForm``) before calling. Returns the saved task instance.
+    """
+    task.save()
+    refresh_project_soonest_due_date(task.project)
+    return task
 
 
 def get_project_tasks(project_id: int) -> QuerySet[Task]:
@@ -31,6 +65,35 @@ def get_project_tasks(project_id: int) -> QuerySet[Task]:
         Task.objects.filter(project_id=project_id)
         .order_by(F("due_date").asc(nulls_last=True), "name", "pk")
     )
+
+
+def partition_overdue_tasks(
+    tasks: Iterable[Task],
+    today: date | None = None,
+) -> tuple[list[Task], list[Task]]:
+    """Split open tasks with a past due date into a separate overdue list.
+
+    A task is overdue when it is todo or in progress, has a due date, and that
+    date is strictly before ``today``. Overdue tasks are excluded from the list
+    returned for status-section grouping.
+    """
+    if today is None:
+        today = timezone.localdate()
+
+    overdue_tasks: list[Task] = []
+    remaining_tasks: list[Task] = []
+
+    for task in tasks:
+        if (
+            task.status in _OPEN_STATUSES
+            and task.due_date is not None
+            and task.due_date < today
+        ):
+            overdue_tasks.append(task)
+        else:
+            remaining_tasks.append(task)
+
+    return overdue_tasks, remaining_tasks
 
 
 def build_task_status_sections(tasks: Iterable[Task]) -> list[dict[str, Any]]:
