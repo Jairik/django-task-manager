@@ -68,6 +68,7 @@ class Task(models.Model):
         related_name="tasks",
     )
     name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
     priority = models.CharField(
         max_length=20,
         choices=Priority.choices,

@@ -35,6 +35,7 @@ erDiagram
         bigint id PK
         bigint project_id FK
         varchar name
+        text description
         varchar priority
         date due_date
         varchar status
@@ -121,6 +122,7 @@ Optional list of up to **3** short labels on both `project` and `task`.
 | `id`         | `BIGSERIAL`     | PK                          |
 | `project_id` | `BIGINT`        | NOT NULL, FK → `project.id` |
 | `name`       | `VARCHAR(255)`  | NOT NULL                    |
+| `description` | `TEXT`          | NULL allowed                |
 | `priority`   | `VARCHAR(20)`   | NOT NULL, default `low`     |
 | `due_date`   | `DATE`          | NULL allowed                |
 | `status`     | `VARCHAR(20)`   | NOT NULL, default `todo`    |
@@ -193,6 +195,7 @@ class Project(models.Model):
 class Task(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="tasks")
     name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
     priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.LOW)
     due_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=TaskStatus.choices, default=TaskStatus.TODO)

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ project.name }}</title>
+</head>
+<body>
+    <h1>{{ project.name }}</h1>
+    <p>{{ project.get_priority_display }}</p>
+
+    {% for section in task_sections %}
+    <section>
+        <h2>{{ section.label }}</h2>
+        {% for task in section.tasks %}
+        <article>
+            <h3>{{ task.name }}</h3>
+            {% if task.description %}
+            <p>{{ task.description }}</p>
+            {% endif %}
+            <p>{{ task.get_priority_display }} · {{ task.get_status_display }}</p>
+            {% if task.due_date %}
+            <p>Due {{ task.due_date }}</p>
+            {% endif %}
+            {% for tag in task.tags %}
+            <span>{{ tag }}</span>
+            {% endfor %}
+        </article>
+        {% empty %}
+        <p>No tasks</p>
+        {% endfor %}
+    </section>
+    {% endfor %}
+</body>
+</html>
