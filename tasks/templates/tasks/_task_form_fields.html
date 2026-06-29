@@ -1,0 +1,89 @@
+{% comment %}
+Shared task form fields for create and edit pages.
+
+Expects `form` plus class strings: input_class, label_class, error_class,
+textarea_class (set via {% with %} in the parent template).
+{% endcomment %}
+
+{% if form.non_field_errors %}
+<div class="rounded-[11px] border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-[13px] font-medium text-[#b91c1c]">
+    {{ form.non_field_errors }}
+</div>
+{% endif %}
+
+<!-- Task name (required). -->
+<div>
+    <label for="{{ form.name.id_for_label }}" class="{{ label_class }}">Task name</label>
+    <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}"
+           value="{{ form.name.value|default_if_none:'' }}"
+           maxlength="255" required
+           placeholder="e.g. Draft initial designs"
+           class="{{ input_class }}{% if form.name.errors %} border-[#fca5a5]{% endif %}">
+    {% if form.name.errors %}<p class="{{ error_class }}">{{ form.name.errors.0 }}</p>{% endif %}
+</div>
+
+<!-- Description (optional). -->
+<div>
+    <label for="{{ form.description.id_for_label }}" class="{{ label_class }}">Description</label>
+    <textarea name="{{ form.description.html_name }}" id="{{ form.description.id_for_label }}"
+              rows="3"
+              placeholder="What needs to happen for this task to be done?"
+              class="{{ textarea_class }}{% if form.description.errors %} border-[#fca5a5]{% endif %}">{{ form.description.value|default_if_none:'' }}</textarea>
+    {% if form.description.errors %}<p class="{{ error_class }}">{{ form.description.errors.0 }}</p>{% endif %}
+</div>
+
+{% comment %}
+Tags — one group label and three optional inputs. Blank values are ignored
+by TaskForm._collect_tags on save.
+{% endcomment %}
+<div>
+    <span id="tags-label" class="{{ label_class }}">Tags</span>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-labelledby="tags-label">
+        <div>
+            <input type="text" name="{{ form.tag_1.html_name }}" id="{{ form.tag_1.id_for_label }}"
+                   value="{{ form.tag_1.value|default_if_none:'' }}"
+                   maxlength="50" placeholder="Tag 1" aria-label="Tag 1 (optional)"
+                   class="{{ input_class }}{% if form.tag_1.errors %} border-[#fca5a5]{% endif %}">
+            {% if form.tag_1.errors %}<p class="{{ error_class }}">{{ form.tag_1.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+            <input type="text" name="{{ form.tag_2.html_name }}" id="{{ form.tag_2.id_for_label }}"
+                   value="{{ form.tag_2.value|default_if_none:'' }}"
+                   maxlength="50" placeholder="Tag 2" aria-label="Tag 2 (optional)"
+                   class="{{ input_class }}{% if form.tag_2.errors %} border-[#fca5a5]{% endif %}">
+            {% if form.tag_2.errors %}<p class="{{ error_class }}">{{ form.tag_2.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+            <input type="text" name="{{ form.tag_3.html_name }}" id="{{ form.tag_3.id_for_label }}"
+                   value="{{ form.tag_3.value|default_if_none:'' }}"
+                   maxlength="50" placeholder="Tag 3" aria-label="Tag 3 (optional)"
+                   class="{{ input_class }}{% if form.tag_3.errors %} border-[#fca5a5]{% endif %}">
+            {% if form.tag_3.errors %}<p class="{{ error_class }}">{{ form.tag_3.errors.0 }}</p>{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Priority + Due date sit side by side, wrapping on narrow screens. -->
+<div class="flex gap-5 flex-wrap">
+
+    <!-- Priority select keeps all five model choices. -->
+    <div class="flex-1 min-w-[200px]">
+        <label for="{{ form.priority.id_for_label }}" class="{{ label_class }}">Priority</label>
+        <select name="{{ form.priority.html_name }}" id="{{ form.priority.id_for_label }}"
+                class="{{ input_class }}{% if form.priority.errors %} border-[#fca5a5]{% endif %}">
+            {% for value, label in form.priority.field.choices %}
+            <option value="{{ value }}"{% if form.priority.value|stringformat:"s" == value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% if form.priority.errors %}<p class="{{ error_class }}">{{ form.priority.errors.0 }}</p>{% endif %}
+    </div>
+
+    <!-- Due date (optional). -->
+    <div class="flex-1 min-w-[200px]">
+        <label for="{{ form.due_date.id_for_label }}" class="{{ label_class }}">Due date</label>
+        <input type="date" name="{{ form.due_date.html_name }}" id="{{ form.due_date.id_for_label }}"
+               value="{{ form.due_date.value|default_if_none:'' }}"
+               class="{{ input_class }}{% if form.due_date.errors %} border-[#fca5a5]{% endif %}">
+        {% if form.due_date.errors %}<p class="{{ error_class }}">{{ form.due_date.errors.0 }}</p>{% endif %}
+    </div>
+</div>

@@ -1,5 +1,5 @@
 {% comment %}
-Single task row for the project detail page. Expects `task` in context.
+Single task row for the project detail page. Expects `task` and `project` in context.
 
 Rendered as a native <details> element: the summary is the always-visible row
 (tags, name, priority, due date) and the body reveals the description and
@@ -49,15 +49,67 @@ created date. The chevron rotates via the `open` state — no JavaScript needed.
         </div>
 
         {% comment %}
-        Completion indicator. Static (read-only) for now — a green check when the
-        task is done, an empty box otherwise. Wire to a toggle endpoint later.
+        Row actions: edit link + status button. stopPropagation keeps the
+        <details> summary from toggling when these controls are clicked.
         {% endcomment %}
-        <span class="shrink-0 w-[34px] h-[34px] rounded-[9px] flex items-center justify-center
-            {% if task.status == 'done' %}bg-[#16a34a] shadow-[0_1px_2px_rgba(22,163,74,.3)]{% else %}bg-[var(--surface)] border border-[var(--border)]{% endif %}">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{% if task.status == 'done' %}#fff{% else %}#cbd5e1{% endif %}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-        </span>
+        <div class="shrink-0 flex items-center gap-2" onclick="event.stopPropagation();">
+
+            <!-- Pencil — opens the edit task page. -->
+            <a href="{% url 'task_edit' project.pk task.pk %}"
+               onclick="event.stopPropagation();"
+               aria-label="Edit task"
+               title="Edit task"
+               class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-focus)] hover:bg-[var(--surface-muted)] text-[var(--text-subtle)] hover:text-[var(--text-muted)]">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </a>
+
+            {% if task.status == 'todo' or task.status == 'in_progress' %}
+            <!-- Advance: up arrow for todo, checkmark for in progress. -->
+            <form method="post" action="{% url 'task_advance' project.pk task.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        onclick="event.stopPropagation();"
+                        aria-label="{% if task.status == 'todo' %}Advance task{% else %}Mark complete{% endif %}"
+                        title="{% if task.status == 'todo' %}Advance task{% else %}Mark complete{% endif %}"
+                        class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-focus)] hover:bg-[var(--surface-muted)] cursor-pointer">
+                    {% if task.status == 'todo' %}
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                    {% else %}
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    {% endif %}
+                </button>
+            </form>
+
+            {% elif task.status == 'done' %}
+            <!-- Done: gray check at rest; hover swaps to X to cancel the task. -->
+            <form method="post" action="{% url 'task_cancel' project.pk task.pk %}" class="inline group/done">
+                {% csrf_token %}
+                <button type="submit"
+                        onclick="event.stopPropagation();"
+                        aria-label="Cancel task"
+                        title="Cancel task"
+                        class="relative w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-[#f1f5f9] border border-[var(--border)] hover:border-[#fca5a5] hover:bg-[#fef2f2] cursor-pointer">
+                    <svg class="transition-opacity group-hover/done:opacity-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <svg class="absolute opacity-0 transition-opacity group-hover/done:opacity-100" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </form>
+            {% endif %}
+            {# Cancelled tasks show no status action button (terminal state). #}
+
+        </div>
     </summary>
 
     <!-- Expanded detail: description (if any) + created date. -->

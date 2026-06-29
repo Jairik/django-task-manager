@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>New Task — {{ project.name }}</title>
+    <title>Edit Task — {{ project.name }}</title>
 
     {% include "includes/theme_setup.html" %}
 </head>
@@ -37,40 +37,67 @@
                         Back to project
                     </a>
 
-                    <!-- Form card — header / body / footer sections mirror the artifact. -->
+                    <!-- Form card — header / body / footer sections mirror the create page. -->
                     <div class="bg-[var(--surface)] border border-[var(--border-card)] rounded-[16px] overflow-hidden shadow-[0_1px_2px_var(--shadow-card),0_6px_18px_var(--shadow-card)]">
 
-                        <!-- Card header: title + the project this task joins (starts in "To do"). -->
+                        <!-- Card header: title + project context and current status. -->
                         <div class="p-[24px_28px_20px] border-b border-[var(--border-light)]">
-                            <div class="text-[20px] font-extrabold text-[var(--text)] tracking-[-0.02em]">New task</div>
+                            <div class="text-[20px] font-extrabold text-[var(--text)] tracking-[-0.02em]">Edit task</div>
                             <div class="mt-1 text-[13px] font-medium text-[var(--text-subtle)]">
-                                Adding to <span class="text-[var(--text-muted)] font-bold">{{ project.name }}</span> — starts in <span class="text-[#2563eb] font-bold">To do</span>.
+                                In <span class="text-[var(--text-muted)] font-bold">{{ project.name }}</span> — currently
+                                <span class="font-bold
+                                    {% if task.status == 'todo' %}text-[#2563eb]
+                                    {% elif task.status == 'in_progress' %}text-[#ea580c]
+                                    {% elif task.status == 'done' %}text-[#16a34a]
+                                    {% else %}text-[var(--text-subtle)]{% endif %}">{{ task.get_status_display }}</span>.
                             </div>
                         </div>
 
-                        <form method="post" novalidate>
+                        <form method="post" id="task-edit-form" novalidate>
                             {% csrf_token %}
 
-                            {% comment %}
-                            Shared field classes — match the create-project form so both
-                            screens feel identical; colors use CSS variables for theming.
-                            {% endcomment %}
                             {% with input_class="w-full box-border h-[48px] bg-[var(--surface)] border border-[var(--border)] rounded-[11px] px-[14px] text-[15px] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:border-[#16a34a] focus:shadow-[0_0_0_3px_rgba(22,163,74,.12)] focus:outline-none" label_class="block text-[12.5px] font-bold text-[var(--text-muted)] mb-2" error_class="mt-1 text-xs font-medium text-[#b91c1c]" textarea_class="w-full box-border bg-[var(--surface)] border border-[var(--border)] rounded-[11px] px-[14px] py-[11px] text-[14.5px] leading-[1.5] font-medium text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:border-[#16a34a] focus:shadow-[0_0_0_3px_rgba(22,163,74,.12)] focus:outline-none resize-y min-h-[96px]" %}
 
-                            <!-- Card body: stacked fields. -->
+                            <!-- Card body: shared fields + status select. -->
                             <div class="p-[24px_28px_26px] flex flex-col gap-[22px]">
                                 {% include "tasks/_task_form_fields.html" %}
+
+                                <div>
+                                    <label for="{{ form.status.id_for_label }}" class="{{ label_class }}">Status</label>
+                                    <select name="{{ form.status.html_name }}" id="{{ form.status.id_for_label }}"
+                                            class="{{ input_class }}{% if form.status.errors %} border-[#fca5a5]{% endif %}">
+                                        {% for value, label in form.status.field.choices %}
+                                        <option value="{{ value }}"{% if form.status.value|stringformat:"s" == value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if form.status.errors %}<p class="{{ error_class }}">{{ form.status.errors.0 }}</p>{% endif %}
+                                </div>
                             </div>
 
                             {% endwith %}
+                        </form>
 
-                            <!-- Card footer: actions on a muted strip, primary on the right. -->
-                            <div class="p-[18px_28px] bg-[var(--surface-muted)] border-t border-[var(--border-light)] flex justify-end gap-2.5">
+                        <!-- Footer: separate delete form (cannot nest inside the save form). -->
+                        <div class="p-[18px_28px] bg-[var(--surface-muted)] border-t border-[var(--border-light)] flex justify-between gap-2.5 flex-wrap">
+                            <form method="post" action="{% url 'task_delete' project.pk task.pk %}"
+                                  onsubmit="return confirm('Delete this task?');">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="inline-flex items-center gap-[7px] h-[46px] px-5 bg-[#fef2f2] hover:bg-[#fee2e2] text-[#b91c1c] border border-[#fecaca] rounded-[11px] font-bold text-[14px]">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    Delete task
+                                </button>
+                            </form>
+
+                            <div class="flex gap-2.5">
                                 <a href="{% url 'project_detail' project.pk %}"
                                    class="inline-flex items-center h-[46px] px-5 bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--text-muted)] border border-[var(--border)] rounded-[11px] font-bold text-[14px]">
                                     Cancel
                                 </a>
-                                <button type="submit"
+                                <button type="submit" form="task-edit-form"
                                         class="inline-flex items-center gap-[7px] h-[46px] px-[22px] bg-[#16a34a] hover:bg-[#15a049] text-white rounded-[11px] font-bold text-[14px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_6px_14px_rgba(22,163,74,.2)]">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="20 6 9 17 4 12"></polyline>
@@ -78,7 +105,7 @@
                                     {{ submit_label }}
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>

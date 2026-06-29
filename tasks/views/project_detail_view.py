@@ -13,9 +13,10 @@ from tasks.queries import (
 def project_detail(request, pk: int):
     """Render one project and its tasks grouped by status."""
     project = get_object_or_404(Project, pk=pk)
+    search = request.GET.get("q", "").strip()
 
     # Materialize once so we can group tasks and tally header stats with one query.
-    tasks = list(get_project_tasks(project.pk))
+    tasks = list(get_project_tasks(project.pk, search=search))
     overdue_tasks, remaining_tasks = partition_overdue_tasks(tasks)
     task_sections = build_task_status_sections(remaining_tasks)
 

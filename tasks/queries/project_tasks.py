@@ -9,17 +9,24 @@ from collections.abc import Iterable
 from datetime import date
 from typing import Any
 
-from django.db.models import F, Min, QuerySet
+from django.db.models import F, Min, Q, QuerySet
 from django.utils import timezone
 
 from tasks.models import Project, Task, TaskStatus
 
-# Fixed section order for the project detail template (todo → cancelled).
+# Fixed section order for the project detail template (in progress → cancelled).
 TASK_STATUS_SECTION_ORDER: tuple[TaskStatus, ...] = (
+    TaskStatus.IN_PROGRESS,
+    TaskStatus.TODO,
+    TaskStatus.DONE,
+    TaskStatus.CANCELLED,
+)
+
+# Ordered progression for advancing a task (cancelled is not in this chain).
+TASK_STATUS_ADVANCEMENT: tuple[TaskStatus, ...] = (
     TaskStatus.TODO,
     TaskStatus.IN_PROGRESS,
     TaskStatus.DONE,
-    TaskStatus.CANCELLED,
 )
 
 # Open statuses eligible for the overdue bucket on the project detail page.
@@ -55,16 +62,88 @@ def create_task_for_project(task: Task) -> Task:
     return task
 
 
-def get_project_tasks(project_id: int) -> QuerySet[Task]:
-    """Return all tasks for a project, ordered for within-section display.
+def update_task_for_project(task: Task) -> Task:
+    """Save task field changes and refresh the parent project's ``soonest_due_date``.
 
-    Uses task_project_id_idx. Tasks are sorted by due date (nulls last), then
-    name, then primary key as a stable tiebreaker.
+    Call after ``TaskForm.save()`` when ``due_date`` (or any dated-task set) may
+    have changed. Returns the saved task instance.
     """
-    return (
-        Task.objects.filter(project_id=project_id)
-        .order_by(F("due_date").asc(nulls_last=True), "name", "pk")
-    )
+    task.save()
+    refresh_project_soonest_due_date(task.project)
+    return task
+
+
+def delete_task_for_project(task: Task) -> None:
+    """Delete a task and refresh the parent project's ``soonest_due_date``."""
+    project = task.project
+    task.delete()
+    refresh_project_soonest_due_date(project)
+
+
+def get_next_task_status(current: TaskStatus) -> TaskStatus | None:
+    """Return the next status along todo → in_progress → done, or None at the end.
+
+    ``cancelled`` is outside the advancement chain and always returns ``None``.
+    """
+    try:
+        current_index = TASK_STATUS_ADVANCEMENT.index(current)
+    except ValueError:
+        return None
+
+    next_index = current_index + 1
+    if next_index >= len(TASK_STATUS_ADVANCEMENT):
+        return None
+
+    return TASK_STATUS_ADVANCEMENT[next_index]
+
+
+def advance_task_status(task: Task) -> Task:
+    """Move a task one step forward along todo → in_progress → done.
+
+    Idempotent when the task is already ``done`` or ``cancelled`` (no save).
+    Status-only changes do not refresh ``soonest_due_date``.
+    """
+    next_status = get_next_task_status(TaskStatus(task.status))
+    if next_status is None:
+        return task
+
+    task.status = next_status
+    task.save(update_fields=["status", "updated_at"])
+    return task
+
+
+def cancel_task(task: Task) -> Task:
+    """Mark a task as cancelled.
+
+    Idempotent when the task is already ``cancelled`` (no save).
+    """
+    if task.status == TaskStatus.CANCELLED:
+        return task
+
+    task.status = TaskStatus.CANCELLED
+    task.save(update_fields=["status", "updated_at"])
+    return task
+
+
+def get_project_tasks(project_id: int, search: str = "") -> QuerySet[Task]:
+    """Return tasks for a project, optionally filtered by search term.
+
+  Search matches task name, description (case-insensitive), or an exact tag
+  string in the PostgreSQL tags array. Uses task_project_id_idx for project
+  scope and task_tags_gin_idx for tag lookup. Tasks are sorted by due date
+  (nulls last), then name, then primary key as a stable tiebreaker.
+    """
+    queryset = Task.objects.filter(project_id=project_id)
+
+    # Narrow the queryset before ordering when the user typed a search term.
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search)
+            | Q(description__icontains=search)
+            | Q(tags__contains=[search])
+        )
+
+    return queryset.order_by(F("due_date").asc(nulls_last=True), "name", "pk")
 
 
 def partition_overdue_tasks(

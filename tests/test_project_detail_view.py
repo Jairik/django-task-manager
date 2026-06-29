@@ -7,10 +7,15 @@ from django.test import Client
 
 from tasks.models import Priority, Project, Task, TaskStatus
 from tasks.queries import (
+    advance_task_status,
     build_task_status_sections,
+    cancel_task,
     create_task_for_project,
+    delete_task_for_project,
+    get_next_task_status,
     get_project_tasks,
     partition_overdue_tasks,
+    update_task_for_project,
 )
 
 # Fixed "today" for deterministic overdue partition unit tests.
@@ -137,14 +142,14 @@ def test_build_task_status_sections_preserves_order() -> None:
     sections = build_task_status_sections([done_task, todo_task])
 
     assert [section["label"] for section in sections] == [
-        "To do",
         "In progress",
+        "To do",
         "Done",
         "Cancelled",
     ]
-    assert [task.name for task in sections[0]["tasks"]] == ["Todo one"]
+    assert [task.name for task in sections[1]["tasks"]] == ["Todo one"]
     assert [task.name for task in sections[2]["tasks"]] == ["Done one"]
-    assert sections[1]["tasks"] == []
+    assert sections[0]["tasks"] == []
     assert sections[3]["tasks"] == []
 
 
@@ -208,7 +213,7 @@ def test_partition_overdue_tasks_due_today_not_overdue() -> None:
     sections = build_task_status_sections(remaining_tasks)
 
     assert overdue_tasks == []
-    assert [task.name for task in sections[0]["tasks"]] == ["Due today task"]
+    assert [task.name for task in sections[1]["tasks"]] == ["Due today task"]
 
 
 @pytest.mark.django_db
@@ -228,7 +233,7 @@ def test_partition_overdue_tasks_null_due_date_not_overdue() -> None:
     sections = build_task_status_sections(remaining_tasks)
 
     assert overdue_tasks == []
-    assert [task.name for task in sections[0]["tasks"]] == ["Undated todo"]
+    assert [task.name for task in sections[1]["tasks"]] == ["Undated todo"]
 
 
 @pytest.mark.django_db
@@ -378,3 +383,269 @@ def test_task_create_view_redirects_to_project_detail(client: Client) -> None:
     assert Task.objects.filter(project=project, name="Ship it").exists()
     project.refresh_from_db()
     assert project.soonest_due_date == date(2026, 11, 1)
+
+
+@pytest.mark.django_db
+def test_get_next_task_status_follows_advancement_chain() -> None:
+    """Status advancement follows todo → in_progress → done, then stops."""
+    assert get_next_task_status(TaskStatus.TODO) == TaskStatus.IN_PROGRESS
+    assert get_next_task_status(TaskStatus.IN_PROGRESS) == TaskStatus.DONE
+    assert get_next_task_status(TaskStatus.DONE) is None
+    assert get_next_task_status(TaskStatus.CANCELLED) is None
+
+
+@pytest.mark.django_db
+def test_advance_task_status_steps_through_open_statuses() -> None:
+    """Repeated advances move a task from todo to done."""
+    project = Project.objects.create(name="Advance path")
+    task = Task.objects.create(project=project, name="Step up", status=TaskStatus.TODO)
+
+    advance_task_status(task)
+    task.refresh_from_db()
+    assert task.status == TaskStatus.IN_PROGRESS
+
+    advance_task_status(task)
+    task.refresh_from_db()
+    assert task.status == TaskStatus.DONE
+
+
+@pytest.mark.django_db
+def test_advance_task_status_is_noop_when_done() -> None:
+    """Advancing a done task leaves its status unchanged."""
+    project = Project.objects.create(name="Done noop")
+    task = Task.objects.create(project=project, name="Finished", status=TaskStatus.DONE)
+
+    advance_task_status(task)
+    task.refresh_from_db()
+
+    assert task.status == TaskStatus.DONE
+
+
+@pytest.mark.django_db
+def test_advance_task_status_is_noop_when_cancelled() -> None:
+    """Advancing a cancelled task leaves its status unchanged."""
+    project = Project.objects.create(name="Cancelled noop")
+    task = Task.objects.create(
+        project=project,
+        name="Dropped",
+        status=TaskStatus.CANCELLED,
+    )
+
+    advance_task_status(task)
+    task.refresh_from_db()
+
+    assert task.status == TaskStatus.CANCELLED
+
+
+@pytest.mark.parametrize(
+    "initial_status",
+    [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE],
+)
+@pytest.mark.django_db
+def test_cancel_task_sets_cancelled(initial_status: TaskStatus) -> None:
+    """Cancel moves open or done tasks into the cancelled state."""
+    project = Project.objects.create(name="Cancel path")
+    task = Task.objects.create(project=project, name="Stop", status=initial_status)
+
+    cancel_task(task)
+    task.refresh_from_db()
+
+    assert task.status == TaskStatus.CANCELLED
+
+
+@pytest.mark.django_db
+def test_cancel_task_is_noop_when_already_cancelled() -> None:
+    """Cancelling an already-cancelled task does not error."""
+    project = Project.objects.create(name="Cancel noop")
+    task = Task.objects.create(
+        project=project,
+        name="Already stopped",
+        status=TaskStatus.CANCELLED,
+    )
+
+    cancel_task(task)
+    task.refresh_from_db()
+
+    assert task.status == TaskStatus.CANCELLED
+
+
+@pytest.mark.django_db
+def test_task_advance_view_redirects_and_updates_status(client: Client) -> None:
+    """POSTing the advance endpoint moves the task and returns to project detail."""
+    project = Project.objects.create(name="Advance view")
+    task = Task.objects.create(project=project, name="Move up", status=TaskStatus.TODO)
+
+    response = client.post(f"/projects/{project.pk}/tasks/{task.pk}/advance/")
+
+    assert response.status_code == 302
+    assert response["Location"] == f"/projects/{project.pk}/"
+    task.refresh_from_db()
+    assert task.status == TaskStatus.IN_PROGRESS
+
+
+@pytest.mark.django_db
+def test_task_cancel_view_redirects_and_cancels(client: Client) -> None:
+    """POSTing the cancel endpoint marks the task cancelled and redirects back."""
+    project = Project.objects.create(name="Cancel view")
+    task = Task.objects.create(project=project, name="Drop it", status=TaskStatus.IN_PROGRESS)
+
+    response = client.post(f"/projects/{project.pk}/tasks/{task.pk}/cancel/")
+
+    assert response.status_code == 302
+    assert response["Location"] == f"/projects/{project.pk}/"
+    task.refresh_from_db()
+    assert task.status == TaskStatus.CANCELLED
+
+
+@pytest.mark.django_db
+def test_task_advance_view_returns_404_for_wrong_project(client: Client) -> None:
+    """Advance rejects tasks that do not belong to the URL project."""
+    project_a = Project.objects.create(name="Project A")
+    project_b = Project.objects.create(name="Project B")
+    task = Task.objects.create(project=project_a, name="Wrong board", status=TaskStatus.TODO)
+
+    response = client.post(f"/projects/{project_b.pk}/tasks/{task.pk}/advance/")
+
+    assert response.status_code == 404
+    task.refresh_from_db()
+    assert task.status == TaskStatus.TODO
+
+
+@pytest.mark.django_db
+def test_task_advance_view_rejects_get(client: Client) -> None:
+    """GET requests to the advance endpoint are not allowed."""
+    project = Project.objects.create(name="GET guard")
+    task = Task.objects.create(project=project, name="No GET", status=TaskStatus.TODO)
+
+    response = client.get(f"/projects/{project.pk}/tasks/{task.pk}/advance/")
+
+    assert response.status_code == 405
+    task.refresh_from_db()
+    assert task.status == TaskStatus.TODO
+
+
+@pytest.mark.django_db
+def test_update_task_for_project_refreshes_soonest_due_date() -> None:
+    """Editing a task's due date updates the parent project's soonest_due_date."""
+    project = Project.objects.create(name="Update soonest")
+    task = Task.objects.create(
+        project=project,
+        name="Original",
+        due_date=date(2026, 10, 1),
+    )
+    project.soonest_due_date = date(2026, 10, 1)
+    project.save(update_fields=["soonest_due_date"])
+
+    task.due_date = date(2026, 7, 1)
+    update_task_for_project(task)
+    project.refresh_from_db()
+
+    assert project.soonest_due_date == date(2026, 7, 1)
+
+
+@pytest.mark.django_db
+def test_delete_task_for_project_removes_task_and_refreshes_soonest() -> None:
+    """Deleting the only dated task clears the project's soonest_due_date."""
+    project = Project.objects.create(name="Delete soonest")
+    task = Task.objects.create(
+        project=project,
+        name="Only dated",
+        due_date=date(2026, 9, 1),
+    )
+    project.soonest_due_date = date(2026, 9, 1)
+    project.save(update_fields=["soonest_due_date"])
+
+    delete_task_for_project(task)
+    project.refresh_from_db()
+
+    assert not Task.objects.filter(pk=task.pk).exists()
+    assert project.soonest_due_date is None
+
+
+@pytest.mark.django_db
+def test_task_edit_view_saves_changes(client: Client) -> None:
+    """POSTing the edit form updates the task and returns to project detail."""
+    project = Project.objects.create(name="Edit save")
+    task = Task.objects.create(
+        project=project,
+        name="Before",
+        status=TaskStatus.TODO,
+        priority=Priority.LOW,
+    )
+
+    response = client.post(
+        f"/projects/{project.pk}/tasks/{task.pk}/edit/",
+        {
+            "name": "After",
+            "description": "Updated body",
+            "priority": Priority.HIGH,
+            "due_date": "2026-12-01",
+            "status": TaskStatus.IN_PROGRESS,
+            "tag_1": "edited",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response["Location"] == f"/projects/{project.pk}/"
+    task.refresh_from_db()
+    assert task.name == "After"
+    assert task.description == "Updated body"
+    assert task.priority == Priority.HIGH
+    assert task.due_date == date(2026, 12, 1)
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.tags == ["edited"]
+
+
+@pytest.mark.django_db
+def test_task_edit_view_rejects_invalid_data(client: Client) -> None:
+    """Invalid edit submissions re-render the form with errors."""
+    project = Project.objects.create(name="Edit invalid")
+    task = Task.objects.create(project=project, name="Keep name", status=TaskStatus.TODO)
+
+    response = client.post(
+        f"/projects/{project.pk}/tasks/{task.pk}/edit/",
+        {
+            "name": "",
+            "description": "",
+            "priority": Priority.LOW,
+            "status": TaskStatus.TODO,
+        },
+    )
+
+    assert response.status_code == 200
+    task.refresh_from_db()
+    assert task.name == "Keep name"
+
+
+@pytest.mark.django_db
+def test_task_delete_view_removes_task(client: Client) -> None:
+    """POSTing the delete endpoint removes the task and redirects back."""
+    project = Project.objects.create(name="Delete view")
+    task = Task.objects.create(
+        project=project,
+        name="Gone",
+        due_date=date(2026, 8, 1),
+    )
+    project.soonest_due_date = date(2026, 8, 1)
+    project.save(update_fields=["soonest_due_date"])
+
+    response = client.post(f"/projects/{project.pk}/tasks/{task.pk}/delete/")
+
+    assert response.status_code == 302
+    assert response["Location"] == f"/projects/{project.pk}/"
+    assert not Task.objects.filter(pk=task.pk).exists()
+    project.refresh_from_db()
+    assert project.soonest_due_date is None
+
+
+@pytest.mark.django_db
+def test_task_delete_view_returns_404_for_wrong_project(client: Client) -> None:
+    """Delete rejects tasks that do not belong to the URL project."""
+    project_a = Project.objects.create(name="Project A")
+    project_b = Project.objects.create(name="Project B")
+    task = Task.objects.create(project=project_a, name="Wrong board")
+
+    response = client.post(f"/projects/{project_b.pk}/tasks/{task.pk}/delete/")
+
+    assert response.status_code == 404
+    assert Task.objects.filter(pk=task.pk).exists()

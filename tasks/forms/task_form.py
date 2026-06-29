@@ -15,17 +15,20 @@ class TaskForm(forms.ModelForm):
 
     class Meta:
         model = Task
-        # `status` is intentionally omitted: new tasks start as "To do" (the model default).
-        fields = ["name", "description", "priority", "due_date"]
+        # `status` is shown on the edit form only; new tasks use the model default.
+        fields = ["name", "description", "priority", "due_date", "status"]
 
     def __init__(self, *args, **kwargs):
-        """Pre-fill tag inputs when editing an existing task."""
+        """Pre-fill tag inputs when editing; hide status on the create form."""
         super().__init__(*args, **kwargs)
 
         if self.instance.pk:
             existing_tags = self.instance.tags or []
             for index, value in enumerate(existing_tags[:3], start=1):
                 self.fields[f"tag_{index}"].initial = value
+        else:
+            # Create flow omits status — the model default ("todo") applies on save.
+            del self.fields["status"]
 
     def _collect_tags(self) -> list[str]:
         """Return non-empty tag values from the three tag fields."""
