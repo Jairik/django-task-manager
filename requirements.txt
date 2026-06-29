@@ -3,3 +3,6 @@
 Django>=5.1,<6
 # PostgreSQL adapter used by django.db.backends.postgresql
 psycopg[binary]>=3.2,<4
+# Test dependencies (also available via: uv sync --group dev)
+pytest>=8.0
+pytest-django>=4.8

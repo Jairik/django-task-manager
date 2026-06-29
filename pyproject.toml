@@ -11,6 +11,18 @@ dependencies = [
     "psycopg[binary]>=3.2,<4",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.8",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["."]
+python_files = ["test_*.py", "*_test.py", "db_init.py"]
+testpaths = ["tests"]
+
 # Application project — not published as an installable package.
 [tool.uv]
 package = false
