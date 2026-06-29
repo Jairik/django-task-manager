@@ -2,16 +2,26 @@
 
 from django import forms
 
+from tasks.limits import MAX_DESCRIPTION_LENGTH, MAX_TAG_LENGTH
 from tasks.models import Task
 
 
 class TaskForm(forms.ModelForm):
     """Validate task fields and map up to three tag inputs to the tags array."""
 
+    # Bounded CharField overrides the model TextField for web-form validation.
+    description = forms.CharField(
+        max_length=MAX_DESCRIPTION_LENGTH,
+        required=False,
+        widget=forms.Textarea(
+            attrs={"rows": 3, "maxlength": MAX_DESCRIPTION_LENGTH},
+        ),
+    )
+
     # Tags live on the model as an ArrayField; the template groups them under one "tags" label.
-    tag_1 = forms.CharField(max_length=50, required=False, label="")
-    tag_2 = forms.CharField(max_length=50, required=False, label="")
-    tag_3 = forms.CharField(max_length=50, required=False, label="")
+    tag_1 = forms.CharField(max_length=MAX_TAG_LENGTH, required=False, label="")
+    tag_2 = forms.CharField(max_length=MAX_TAG_LENGTH, required=False, label="")
+    tag_3 = forms.CharField(max_length=MAX_TAG_LENGTH, required=False, label="")
 
     class Meta:
         model = Task

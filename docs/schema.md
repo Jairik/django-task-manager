@@ -98,7 +98,7 @@ Optional list of up to **3** short labels on both `project` and `task`.
 | `due_date`          | `DATE`          | NULL allowed             |
 | `soonest_due_date`  | `DATE`          | NULL allowed             |
 | `priority`          | `VARCHAR(20)`   | NOT NULL, default `low`  |
-| `description` | `TEXT`          | NULL allowed             |
+| `description` | `TEXT`          | NULL allowed; app forms cap at 5,000 characters |
 | `tags`        | `VARCHAR(50)[]` | Max 3 elements           |
 | `created_at`  | `TIMESTAMPTZ`   | NOT NULL, auto on insert |
 | `updated_at`  | `TIMESTAMPTZ`   | NOT NULL, auto on update |
@@ -122,7 +122,7 @@ Optional list of up to **3** short labels on both `project` and `task`.
 | `id`         | `BIGSERIAL`     | PK                          |
 | `project_id` | `BIGINT`        | NOT NULL, FK → `project.id` |
 | `name`       | `VARCHAR(255)`  | NOT NULL                    |
-| `description` | `TEXT`          | NULL allowed                |
+| `description` | `TEXT`          | NULL allowed; app forms cap at 5,000 characters |
 | `priority`   | `VARCHAR(20)`   | NOT NULL, default `low`     |
 | `due_date`   | `DATE`          | NULL allowed                |
 | `status`     | `VARCHAR(20)`   | NOT NULL, default `todo`    |

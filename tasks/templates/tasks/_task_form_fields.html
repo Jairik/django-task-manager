@@ -27,6 +27,7 @@ textarea_class (set via {% with %} in the parent template).
     <label for="{{ form.description.id_for_label }}" class="{{ label_class }}">Description</label>
     <textarea name="{{ form.description.html_name }}" id="{{ form.description.id_for_label }}"
               rows="3"
+              maxlength="{{ form.description.field.max_length }}"
               placeholder="What needs to happen for this task to be done?"
               class="{{ textarea_class }}{% if form.description.errors %} border-[#fca5a5]{% endif %}">{{ form.description.value|default_if_none:'' }}</textarea>
     {% if form.description.errors %}<p class="{{ error_class }}">{{ form.description.errors.0 }}</p>{% endif %}

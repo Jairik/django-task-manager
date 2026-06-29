@@ -2,6 +2,7 @@
 
 from django.shortcuts import get_object_or_404, render
 
+from tasks.limits import normalize_search_query
 from tasks.models import Project, TaskStatus
 from tasks.queries import (
     build_task_status_sections,
@@ -13,7 +14,7 @@ from tasks.queries import (
 def project_detail(request, pk: int):
     """Render one project and its tasks grouped by status."""
     project = get_object_or_404(Project, pk=pk)
-    search = request.GET.get("q", "").strip()
+    search = normalize_search_query(request.GET.get("q", ""))
 
     # Materialize once so we can group tasks and tally header stats with one query.
     tasks = list(get_project_tasks(project.pk, search=search))
