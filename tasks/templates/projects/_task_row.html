@@ -1,25 +1,17 @@
 {% comment %}
 Single task row for the project detail page. Expects `task`, `project`, and
-optional `is_manual_sort` and `is_overdue` in context.
+optional `is_overdue` in context.
 
 Rendered as a native <details> element with a status-colored left accent,
 status pill, and two-row summary layout. The chevron rotates via the `open`
 state — no JavaScript needed for expand/collapse.
 {% endcomment %}
-{% load task_status_ui %}
+{% load task_status_ui priority_ui %}
 {% status_ui task.status as ui %}
+{% priority_ui task.priority as prio %}
 
 <details class="group border-l-4 {{ ui.accent_border }} {{ ui.card_classes }} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[12px] px-4 py-[14px] shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
-    <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center gap-3 cursor-pointer">
-
-        {% if is_manual_sort %}
-        <!-- Drag grip — placeholder for future manual reorder (sort=manual). -->
-        <svg class="shrink-0 text-slate-300 dark:text-slate-600 cursor-grab" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="9" cy="7" r="1.5"></circle><circle cx="15" cy="7" r="1.5"></circle>
-            <circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle>
-            <circle cx="9" cy="17" r="1.5"></circle><circle cx="15" cy="17" r="1.5"></circle>
-        </svg>
-        {% endif %}
+    <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center gap-3 cursor-pointer min-w-0 overflow-hidden">
 
         <!-- Chevron — rotates when the row is expanded. -->
         <svg class="shrink-0 transition-transform group-open:rotate-180 text-slate-400 dark:text-slate-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -27,13 +19,13 @@ state — no JavaScript needed for expand/collapse.
         </svg>
 
         <div class="flex-1 min-w-0 flex flex-col gap-[7px]">
-            <!-- Top row: status pill + task title. -->
-            <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap {{ ui.badge_classes }}">
+            <!-- Top row: status pill + task title (title truncates with ellipsis). -->
+            <div class="flex items-center gap-2.5 min-w-0 overflow-hidden">
+                <span class="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap {{ ui.badge_classes }}">
                     {{ ui.icon_markup|status_icon }}
                     {{ ui.label }}
                 </span>
-                <span class="text-[14.5px] font-bold tracking-[-0.01em] break-words {{ ui.title_classes }}">{{ task.name }}</span>
+                <span class="min-w-0 flex-1 truncate text-[14.5px] font-bold tracking-[-0.01em] {{ ui.title_classes }}" title="{{ task.name }}">{{ task.name }}</span>
             </div>
 
             <!-- Bottom row: tags (muted), priority, due date. -->
@@ -46,11 +38,7 @@ state — no JavaScript needed for expand/collapse.
                 </div>
                 {% endif %}
 
-                <!-- Priority — secondary visual weight vs the status pill. -->
-                <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap
-                    {% if task.priority == 'high' or task.priority == 'very_high' %}bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400
-                    {% elif task.priority == 'medium' %}bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400
-                    {% else %}bg-slate-100 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400{% endif %}">
+                <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap {{ prio.compact_badge_classes }}">
                     {{ task.get_priority_display }}
                 </span>
 
@@ -78,7 +66,7 @@ state — no JavaScript needed for expand/collapse.
                onclick="event.stopPropagation();"
                aria-label="Edit task"
                title="Edit task"
-               class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400">
+               class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 transition-[transform,box-shadow,border-color,background-color] duration-200 active:scale-[0.98]">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -93,7 +81,7 @@ state — no JavaScript needed for expand/collapse.
                         onclick="event.stopPropagation();"
                         aria-label="{{ ui.action_hint }}"
                         title="{{ ui.action_hint }}"
-                        class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 {{ ui.action_hover_classes }} text-slate-500 dark:text-slate-400 cursor-pointer">
+                        class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-[box-shadow,border-color,background-color,color] duration-150 active:scale-[0.98] hover:text-slate-700 dark:hover:text-slate-200 {{ ui.action_hover_classes }} text-slate-500 dark:text-slate-400 cursor-pointer">
                     {% if task.status == 'todo' %}
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="19" x2="12" y2="5"></line>
@@ -115,7 +103,7 @@ state — no JavaScript needed for expand/collapse.
                         onclick="event.stopPropagation();"
                         aria-label="{{ ui.action_hint }}"
                         title="{{ ui.action_hint }}"
-                        class="relative w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 {{ ui.action_hover_classes }} cursor-pointer">
+                        class="relative w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-[box-shadow,border-color,background-color,color] duration-150 active:scale-[0.98] hover:text-slate-600 dark:hover:text-slate-200 {{ ui.action_hover_classes }} cursor-pointer">
                     {% if task.status == 'done' %}
                     <svg class="transition-opacity group-hover/done:opacity-0 text-slate-400 dark:text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12"></polyline>
@@ -144,7 +132,7 @@ state — no JavaScript needed for expand/collapse.
     </summary>
 
     <!-- Expanded detail: description (if any) + created date. -->
-    <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 pl-9 break-words min-w-0 {% if task.status == 'done' or task.status == 'cancelled' %}opacity-80{% endif %}">
+    <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 pl-9 break-words min-w-0 transition-opacity duration-200 {% if task.status == 'done' or task.status == 'cancelled' %}opacity-80{% endif %}">
         {% if task.description %}
         <div class="text-[13.5px] leading-[1.55] font-medium text-slate-500 dark:text-slate-400 break-words min-w-0">{{ task.description }}</div>
         {% endif %}

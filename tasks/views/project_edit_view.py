@@ -4,7 +4,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from tasks.forms import ProjectForm
 from tasks.models import Project
-from tasks.queries import update_project
 
 
 def project_edit(request, pk: int):
@@ -15,7 +14,7 @@ def project_edit(request, pk: int):
         form = ProjectForm(request.POST, instance=project)
 
         if form.is_valid():
-            update_project(form.save())
+            form.save()
             return redirect("project_detail", pk=project.pk)
     else:
         form = ProjectForm(instance=project)

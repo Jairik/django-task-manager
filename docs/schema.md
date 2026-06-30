@@ -1,6 +1,6 @@
-# Database Schema
+# Database schema
 
-Planning document for the task manager database. Update this file as models and migrations evolve.
+Reference for the PostgreSQL schema behind the task manager. Source of truth in code: `tasks/models.py` and `tasks/migrations/`. Keep this file in sync when models change.
 
 **Database:** PostgreSQL ([stack.md](./stack.md)) · **Django app:** `tasks`
 
@@ -49,7 +49,7 @@ erDiagram
 
 ## Enums
 
-Adjust values here before updating Django `TextChoices`.
+Defined as Django `TextChoices` in `tasks/models.py`.
 
 ### Priority (`priority`)
 
@@ -142,7 +142,7 @@ Optional list of up to **3** short labels on both `project` and `task`.
 
 | Index                 | Columns      | Type   | Purpose               |
 | --------------------- | ------------ | ------ | --------------------- |
-| `task_project_id_idx` | `project_id` | B-tree | Tasks for one project   |
+| *(FK auto-index)*     | `project_id` | B-tree | Tasks for one project (created by Django on `project` FK) |
 | `task_due_date_idx`   | `due_date`   | B-tree | Task due-date queries   |
 | `task_tags_gin_idx`   | `tags`       | GIN    | Tag array storage / lookup |
 | `task_name_trgm_idx`        | `name`        | GIN (`gin_trgm_ops`) | Fuzzy name search        |
@@ -151,12 +151,32 @@ Optional list of up to **3** short labels on both `project` and `task`.
 
 ### `soonest_due_date` (project)
 
-Denormalized copy of the earliest `due_date` among the project's tasks. Updated by application logic when tasks are created, edited, or deleted (not a database trigger).
+Denormalized copy of the earliest `due_date` among **open** tasks (status `todo` or `in_progress`) with a non-null due date. Distinct from `Project.due_date`, which is the project-level deadline set on the project form.
 
-| Property | Value                                      |
-| -------- | ------------------------------------------ |
-| Type     | `DATE`                                     |
-| Empty    | `NULL` when the project has no dated tasks |
+Eligibility rules live in `tasks/queries/soonest_eligible.py` and are shared by the write refresh and the home-page `soonest_task` name subquery.
+
+| Property | Value |
+| -------- | ----- |
+| Type     | `DATE` |
+| Empty    | `NULL` when the project has no open dated tasks |
+
+#### Does adding a task update `soonest_due_date`?
+
+**Yes**, when the task goes through the app's write helpers in `tasks/queries/project_tasks.py` — not via Django signals or DB triggers.
+
+- `create_task_for_project` saves the task, then calls `refresh_project_soonest_due_date`.
+- The same refresh runs on task edit (`update_task_for_project`), delete (`delete_task_for_project`), and status-only moves (`advance_task_status`, `reopen_task_to_todo`).
+- **Bypassing** those helpers (e.g. `Task.objects.create(...)` in the shell or raw tests) does **not** update the field; call `refresh_project_soonest_due_date(project)` manually if needed.
+
+#### Where is it used?
+
+- **Home page only** — the "Soonest" callout in `tasks/templates/home.html` shows the denormalized date next to the live-annotated task name (`soonest_task` from `get_home_projects`). Project detail does not display this field.
+- Home-page **filter and sort** use the project's own `due_date` field (not `soonest_due_date`). See `tasks/queries/project_list_filters.py` and `tasks/project_list_ui.py`.
+
+#### What does "soonest" mean?
+
+- Earliest `due_date` among tasks with status **todo** or **in_progress** and a non-null `due_date`.
+- `NULL` when no open dated tasks exist (done, cancelled, and undated tasks are ignored).
 
 ---
 
@@ -219,7 +239,6 @@ class Task(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["project_id"], name="task_project_id_idx"),
             models.Index(fields=["due_date"], name="task_due_date_idx"),
             GinIndex(fields=["tags"], name="task_tags_gin_idx"),
             GinIndex(fields=["name"], name="task_name_trgm_idx", opclasses=["gin_trgm_ops"]),

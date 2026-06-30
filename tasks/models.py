@@ -29,7 +29,7 @@ class Project(models.Model):
 
     name = models.CharField(max_length=255)
     due_date = models.DateField(null=True, blank=True)
-    # Earliest task due_date for this project; maintained by app logic, not DB triggers.
+    # Earliest open-task due_date (todo/in_progress); maintained by app logic, not triggers.
     soonest_due_date = models.DateField(null=True, blank=True)
     priority = models.CharField(
         max_length=20,
@@ -97,7 +97,7 @@ class Task(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["project"], name="task_project_id_idx"),
+            # FK on ``project`` already creates a B-tree index on project_id.
             models.Index(fields=["due_date"], name="task_due_date_idx"),
             GinIndex(fields=["tags"], name="task_tags_gin_idx"),
             GinIndex(fields=["name"], name="task_name_trgm_idx", opclasses=["gin_trgm_ops"]),

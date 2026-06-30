@@ -1,6 +1,31 @@
-# django-task-manager
+# Django Task Manager (aka Ultra Super Project Task Manager+)
 
-Basic task management system
+A single-user task management web app built with Django and PostgreSQL. Create projects, add tasks, track status and due dates, and search or filter lists from the browser.
+
+## Features
+
+- **Projects** — create, edit, and delete with name, description, priority, due date, and up to three tags
+- **Tasks** — create, edit, and delete within a project; advance status (to do → in progress → done) or revert done tasks back to to do
+- **Home page** — project grid with progress bars, soonest open-task due date, fuzzy search (`?q=`), and toolbar filters (due date, priority) and sort options
+- **Project detail** — tasks grouped by status with overdue highlighting, fuzzy search, and toolbar filters/sort
+- **Light/dark theme** — persisted in the browser; respects system preference on first visit
+
+No login or user accounts — the app assumes one local user, per the take-home requirements.
+
+## Tech stack
+
+Python 3.14+, Django 5.2, PostgreSQL (`psycopg` 3), server-rendered Django templates, Tailwind CSS via the Play CDN, and pytest for automated tests. See [docs/stack.md](docs/stack.md) for the full breakdown and rationale.
+
+## Documentation
+
+
+| Document                                                 | Contents                                           |
+| -------------------------------------------------------- | -------------------------------------------------- |
+| [docs/stack.md](docs/stack.md)                           | Technologies used and how they fit together        |
+| [docs/schema.md](docs/schema.md)                         | Database tables, indexes, and Django model mapping |
+| [docs/objectives.md](docs/objectives.md)                 | Original requirements                              |
+| [docs/futureImprovements.md](docs/futureImprovements.md) | What would change with more time or at scale       |
+
 
 ## Prerequisites
 
@@ -8,7 +33,7 @@ Basic task management system
 - **Python 3.14+** (see `.python-version`)
 - **uv** ([recommended](https://docs.astral.sh/uv/)) or **pip** + **venv**
 
-Supported platforms: **Linux** (Arch, Debian/Ubuntu, Fedora/RHEL, openSUSE, WSL), **macOS** (Homebrew). Native Windows shells are not supported — use WSL.
+Supported platforms: **Linux** (Arch, Debian/Ubuntu, Fedora/RHEL, openSUSE, WSL), **macOS** (Homebrew). Native Windows shells are not supported - use WSL.
 
 ## Quick setup (recommended)
 
@@ -26,6 +51,59 @@ Then load your env and start the server:
 ```bash
 set -a && source .env.testing && set +a
 uv run python manage.py runserver
+```
+
+Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+
+## Docker (development)
+
+Run the app and PostgreSQL with Docker Compose. Migrations run on startup; the web service binds `runserver` to `0.0.0.0:8000`.
+
+### Prerequisites (Arch Linux)
+
+```bash
+sudo pacman -S docker docker-compose
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+
+After `usermod`, **log out and back in** (or run `newgrp docker`) so your shell picks up the `docker` group. Without that step you will see:
+
+```text
+permission denied while trying to connect to the docker API at unix:///var/run/docker.sock
+```
+
+### Start the stack
+
+```bash
+docker compose up --build
+```
+
+If your session has not refreshed group membership yet, use the project wrapper (it runs compose via `sg docker` when needed):
+
+```bash
+chmod +x scripts/docker-compose.sh   # first time only
+./scripts/docker-compose.sh up --build
+```
+
+Open [http://localhost:8000/](http://localhost:8000/)
+
+Stop the stack with `docker compose down` (or `./scripts/docker-compose.sh down`).
+
+Compose sets `POSTGRES_HOST=db` for the web container (do not use `.env.testing` as-is inside Compose — that file points at `localhost`). Automated tests are still intended to run on the host:
+
+```bash
+set -a && source .env.testing && set +a
+uv run pytest
+```
+
+## Running tests
+
+145 automated tests cover views, queries, filters, and UI helpers.
+
+```bash
+set -a && source .env.testing && set +a
+uv run pytest
 ```
 
 ## PostgreSQL service (by platform)
@@ -96,8 +174,6 @@ uv run python manage.py migrate                      # apply migrations to Postg
 uv run python manage.py runserver                    # start the dev server
 ```
 
-Open http://127.0.0.1:8000/
-
 To add or update a dependency later:
 
 ```bash
@@ -118,4 +194,14 @@ python manage.py migrate                             # apply migrations to Postg
 python manage.py runserver                             # start the dev server
 ```
 
-Open http://127.0.0.1:8000/
+## Project layout
+
+```
+config/          Django project settings and root URLs
+tasks/           Main app — models, views, forms, queries, templates
+tests/           Pytest suite
+docs/            Schema, stack, and design notes for reviewers
+static/          Shared CSS and client-side toolbar scripts
+```
+
+Each major subdirectory has a short `README.md` describing its role.

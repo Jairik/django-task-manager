@@ -36,7 +36,54 @@ so the two themes stay in sync wherever a class is used.
                 fontFamily: {
                     sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
                 },
+                // Shared motion tokens — used by animate-fade-in/up/scale-in utilities.
+                keyframes: {
+                    fadeIn: {
+                        '0%': { opacity: '0' },
+                        '100%': { opacity: '1' },
+                    },
+                    fadeUp: {
+                        '0%': { opacity: '0', transform: 'translateY(4px)' },
+                        '100%': { opacity: '1', transform: 'translateY(0)' },
+                    },
+                    scaleIn: {
+                        '0%': { opacity: '0', transform: 'scale(0.98)' },
+                        '100%': { opacity: '1', transform: 'scale(1)' },
+                    },
+                },
+                animation: {
+                    'fade-in': 'fadeIn 200ms ease-out both',
+                    'fade-up': 'fadeUp 250ms ease-out both',
+                    'scale-in': 'scaleIn 200ms ease-out both',
+                },
+                transitionDuration: {
+                    150: '150ms',
+                    200: '200ms',
+                    500: '500ms',
+                },
+                transitionTimingFunction: {
+                    out: 'cubic-bezier(0, 0, 0.2, 1)',
+                },
             },
         },
     };
 </script>
+
+<!-- Respect OS "reduce motion" — disable entrance animations and shorten transitions. -->
+<style>
+    @media (prefers-reduced-motion: reduce) {
+        .animate-fade-in,
+        .animate-fade-up,
+        .animate-scale-in {
+            animation: none !important;
+        }
+
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+</style>

@@ -1,25 +1,58 @@
 /**
- * Project detail task toolbar: filter/sort popovers, chip removal, and clear actions.
+ * Shared list toolbar: filter/sort popovers, chip removal, and clear actions.
+ * Initialized per page via data-toolbar-prefix ("project" or "task").
  */
 (function () {
-    var filterTrigger = document.getElementById('task-filter-trigger');
-    var sortTrigger = document.getElementById('task-sort-trigger');
-    var filterPopover = document.getElementById('task-filter-popover');
-    var sortPopover = document.getElementById('task-sort-popover');
-    var filterClearBtn = document.getElementById('task-filter-clear');
-    var chipsClearAllBtn = document.getElementById('task-chips-clear-all');
+    var script = document.currentScript;
+    var prefix = script && script.getAttribute('data-toolbar-prefix');
+    if (!prefix) {
+        return;
+    }
+
+    var filterTrigger = document.getElementById(prefix + '-filter-trigger');
+    var sortTrigger = document.getElementById(prefix + '-sort-trigger');
+    var filterPopover = document.getElementById(prefix + '-filter-popover');
+    var sortPopover = document.getElementById(prefix + '-sort-popover');
+    var filterClearBtn = document.getElementById(prefix + '-filter-clear');
+    var chipsClearAllBtn = document.getElementById(prefix + '-chips-clear-all');
+    var dueFilterSelect = document.getElementById(prefix + '-due-filter');
+    var dueOnInput = document.getElementById(prefix + '-due-on-input');
 
     if (!filterTrigger || !sortTrigger || !filterPopover || !sortPopover) {
         return;
     }
 
     var openPopover = null;
+    var POPOVER_TRANSITION_MS = 200;
+
+    /** Fade and scale a popover open after removing `hidden`. */
+    function openPopoverEl(el) {
+        el.classList.remove('hidden');
+        requestAnimationFrame(function () {
+            el.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+            el.classList.add('opacity-100', 'scale-100');
+        });
+    }
+
+    /** Fade and scale a popover closed, then apply `hidden`. */
+    function closePopoverEl(el) {
+        el.classList.remove('opacity-100', 'scale-100');
+        el.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        window.setTimeout(function () {
+            el.classList.add('hidden');
+        }, POPOVER_TRANSITION_MS);
+    }
 
     /** Show one popover and hide the other. */
     function setPopoverOpen(popover) {
         var isFilter = popover === filterPopover;
-        filterPopover.classList.toggle('hidden', !isFilter);
-        sortPopover.classList.toggle('hidden', isFilter);
+        if (isFilter) {
+            closePopoverEl(sortPopover);
+            openPopoverEl(filterPopover);
+        } else {
+            closePopoverEl(filterPopover);
+            openPopoverEl(sortPopover);
+        }
         filterTrigger.setAttribute('aria-expanded', isFilter ? 'true' : 'false');
         sortTrigger.setAttribute('aria-expanded', !isFilter ? 'true' : 'false');
         openPopover = popover;
@@ -27,8 +60,8 @@
 
     /** Close any open popover and restore aria state. */
     function closePopovers() {
-        filterPopover.classList.add('hidden');
-        sortPopover.classList.add('hidden');
+        closePopoverEl(filterPopover);
+        closePopoverEl(sortPopover);
         filterTrigger.setAttribute('aria-expanded', 'false');
         sortTrigger.setAttribute('aria-expanded', 'false');
         openPopover = null;
@@ -61,6 +94,7 @@
         var params = currentParams();
         params.delete('priority');
         params.delete('due');
+        params.delete('due_on');
         navigateWithParams(params);
     }
 
@@ -70,6 +104,7 @@
 
         if (param === 'due') {
             params.delete('due');
+            params.delete('due_on');
             navigateWithParams(params);
             return;
         }
@@ -90,6 +125,17 @@
         }
 
         navigateWithParams(params);
+    }
+
+    if (dueFilterSelect && dueOnInput) {
+        /** Show the calendar input only when "By date" is selected. */
+        function syncDueOnVisibility() {
+            var showCalendar = dueFilterSelect.value === 'by_date';
+            dueOnInput.classList.toggle('hidden', !showCalendar);
+        }
+
+        dueFilterSelect.addEventListener('change', syncDueOnVisibility);
+        syncDueOnVisibility();
     }
 
     filterTrigger.addEventListener('click', function (event) {
@@ -114,7 +160,7 @@
         });
     }
 
-    document.querySelectorAll('.task-chip-remove').forEach(function (button) {
+    document.querySelectorAll('.' + prefix + '-chip-remove').forEach(function (button) {
         button.addEventListener('click', function () {
             removeChipValue(button.getAttribute('data-chip-param'), button.getAttribute('data-chip-value'));
         });

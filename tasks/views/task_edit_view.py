@@ -16,7 +16,8 @@ def task_edit(request, pk: int, task_pk: int):
         form = TaskForm(request.POST, instance=task)
 
         if form.is_valid():
-            update_task_for_project(form.save())
+            task = form.save(commit=False)
+            update_task_for_project(task)
             return redirect("project_detail", pk=project.pk)
     else:
         form = TaskForm(instance=task)

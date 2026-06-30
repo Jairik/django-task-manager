@@ -1,0 +1,25 @@
+# Virtualenv and Python cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Git and editor noise
+.git/
+.gitignore
+.idea/
+.cursor/
+.claude/
+.codex/
+
+# Django collectstatic output and logs
+staticfiles/
+*.log
+
+# Local env files (Compose sets POSTGRES_* for the web service)
+.env*
+
+# OS
+.DS_Store

@@ -17,6 +17,7 @@ from tasks.queries import (
     get_next_task_status,
     get_project_tasks,
     partition_overdue_tasks,
+    refresh_project_soonest_due_date,
     update_project,
     update_task_for_project,
 )
@@ -209,8 +210,25 @@ def test_project_detail_search_empty_state(client: Client) -> None:
 
     assert response.status_code == 200
     content = response.content.decode()
-    assert "No tasks match your search" in content
+    assert "No tasks match your filters" in content
     assert "Visible task" not in content
+
+
+@pytest.mark.django_db
+def test_project_detail_filter_empty_state(client: Client) -> None:
+    """A filter with no matches shows the no-results empty state, not 'No tasks yet'."""
+    project = Project.objects.create(name="Filtered board")
+    Task.objects.create(
+        project=project, name="Low only", priority=Priority.LOW, status=TaskStatus.TODO
+    )
+
+    response = client.get(f"/projects/{project.pk}/?priority=high")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "No tasks match your filters" in content
+    assert "No tasks yet" not in content
+    assert "Low only" not in content
 
 
 @pytest.mark.django_db
@@ -383,7 +401,8 @@ def test_project_detail_renders_overdue_separately(client: Client) -> None:
     assert "Overdue" in content
     assert "Late item" in content
     assert "On track item" in content
-    assert content.count("Late item") == 1
+    # Name appears in title= and visible text; count the rendered label only.
+    assert content.count(">Late item<") == 1
 
 
 @pytest.mark.django_db
@@ -462,6 +481,98 @@ def test_create_task_for_project_undated_leaves_soonest_unchanged() -> None:
     project.refresh_from_db()
 
     assert project.soonest_due_date == date(2026, 10, 1)
+
+
+@pytest.mark.django_db
+def test_refresh_ignores_done_task_with_earlier_due_date() -> None:
+    """Done/cancelled dated tasks do not win over open tasks for soonest_due_date."""
+    project = Project.objects.create(name="Open wins")
+    Task.objects.create(
+        project=project,
+        name="Finished early",
+        status=TaskStatus.DONE,
+        due_date=date(2026, 5, 1),
+    )
+    Task.objects.create(
+        project=project,
+        name="Still open",
+        status=TaskStatus.TODO,
+        due_date=date(2026, 8, 1),
+    )
+
+    refresh_project_soonest_due_date(project)
+    project.refresh_from_db()
+
+    assert project.soonest_due_date == date(2026, 8, 1)
+
+
+@pytest.mark.django_db
+def test_advance_task_status_clears_soonest_when_last_open_dated_task_done() -> None:
+    """Completing the only open dated task clears soonest_due_date."""
+    project = Project.objects.create(name="Advance clear soonest")
+    task = Task.objects.create(
+        project=project,
+        name="Only open dated",
+        status=TaskStatus.IN_PROGRESS,
+        due_date=date(2026, 9, 1),
+    )
+
+    advance_task_status(task)
+    project.refresh_from_db()
+
+    assert task.status == TaskStatus.DONE
+    assert project.soonest_due_date is None
+
+
+@pytest.mark.django_db
+def test_reopen_task_to_todo_restores_soonest_due_date() -> None:
+    """Reopening a dated done task can lower soonest_due_date among open tasks."""
+    project = Project.objects.create(name="Reopen soonest")
+    done_task = Task.objects.create(
+        project=project,
+        name="Was done",
+        status=TaskStatus.DONE,
+        due_date=date(2026, 7, 1),
+    )
+    Task.objects.create(
+        project=project,
+        name="Open later",
+        status=TaskStatus.TODO,
+        due_date=date(2026, 10, 1),
+    )
+    refresh_project_soonest_due_date(project)
+    project.refresh_from_db()
+    assert project.soonest_due_date == date(2026, 10, 1)
+
+    reopen_task_to_todo(done_task)
+    project.refresh_from_db()
+
+    assert project.soonest_due_date == date(2026, 7, 1)
+
+
+@pytest.mark.django_db
+def test_update_task_status_to_cancelled_refreshes_soonest_due_date() -> None:
+    """Cancelling the soonest open task promotes the next eligible due date."""
+    project = Project.objects.create(name="Cancel soonest")
+    soonest = Task.objects.create(
+        project=project,
+        name="Will cancel",
+        status=TaskStatus.TODO,
+        due_date=date(2026, 6, 1),
+    )
+    Task.objects.create(
+        project=project,
+        name="Other",
+        status=TaskStatus.TODO,
+        due_date=date(2026, 9, 1),
+    )
+    refresh_project_soonest_due_date(project)
+
+    soonest.status = TaskStatus.CANCELLED
+    update_task_for_project(soonest)
+    project.refresh_from_db()
+
+    assert project.soonest_due_date == date(2026, 9, 1)
 
 
 @pytest.mark.django_db
@@ -898,6 +1009,154 @@ def test_project_delete_view_removes_project(client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_project_detail_header_stats_relabeled_when_filtered(client: Client) -> None:
+    """Filtered task lists show honest header labels and counts for the subset only."""
+    project = Project.objects.create(name="Filtered stats")
+    Task.objects.create(
+        project=project, name="High open", priority=Priority.HIGH, status=TaskStatus.TODO
+    )
+    Task.objects.create(
+        project=project, name="Low done A", priority=Priority.LOW, status=TaskStatus.DONE
+    )
+    Task.objects.create(
+        project=project, name="Low done B", priority=Priority.LOW, status=TaskStatus.DONE
+    )
+    Task.objects.create(
+        project=project, name="Low todo", priority=Priority.LOW, status=TaskStatus.TODO
+    )
+
+    response = client.get(f"/projects/{project.pk}/?priority=high")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Filtered progress" in content
+    assert "Tasks shown" in content
+    assert "of 4 total" in content
+    assert "0/1" in content
+    assert "0%" in content
+    # Whole-project progress (2/4 = 50%) must not appear as the header percentage.
+    assert content.count("50%") == 0
+
+
+@pytest.mark.django_db
+def test_project_detail_filter_by_priority(client: Client) -> None:
+    """Priority filter hides tasks that do not match the selected level."""
+    project = Project.objects.create(name="Priority filter")
+    Task.objects.create(
+        project=project, name="Low only", priority=Priority.LOW, status=TaskStatus.TODO
+    )
+    Task.objects.create(
+        project=project, name="High other", priority=Priority.HIGH, status=TaskStatus.TODO
+    )
+
+    response = client.get(f"/projects/{project.pk}/?priority=low")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Low only" in content
+    assert "High other" not in content
+
+
+@pytest.mark.django_db
+def test_project_detail_filter_by_overdue(client: Client) -> None:
+    """Overdue due filter shows only open tasks past their due date."""
+    project = Project.objects.create(name="Overdue filter")
+    Task.objects.create(
+        project=project,
+        name="Late item",
+        status=TaskStatus.TODO,
+        due_date=date(2020, 1, 1),
+    )
+    Task.objects.create(
+        project=project,
+        name="Future item",
+        status=TaskStatus.TODO,
+        due_date=date(2099, 1, 1),
+    )
+
+    response = client.get(f"/projects/{project.pk}/?due=overdue")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Late item" in content
+    assert "Future item" not in content
+
+
+@pytest.mark.django_db
+def test_project_detail_filter_by_date_on_or_before(client: Client) -> None:
+    """By-date filter shows dated tasks due on or before the selected date."""
+    project = Project.objects.create(name="By date filter")
+    Task.objects.create(
+        project=project,
+        name="Before cutoff",
+        status=TaskStatus.TODO,
+        due_date=date(2026, 6, 20),
+    )
+    Task.objects.create(
+        project=project,
+        name="On cutoff",
+        status=TaskStatus.TODO,
+        due_date=date(2026, 7, 1),
+    )
+    Task.objects.create(
+        project=project,
+        name="After cutoff",
+        status=TaskStatus.TODO,
+        due_date=date(2026, 7, 15),
+    )
+    Task.objects.create(
+        project=project,
+        name="Undated",
+        status=TaskStatus.TODO,
+        due_date=None,
+    )
+
+    response = client.get(f"/projects/{project.pk}/?due=by_date&due_on=2026-07-01")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "Before cutoff" in content
+    assert "On cutoff" in content
+    assert "After cutoff" not in content
+    assert "Undated" not in content
+
+
+@pytest.mark.django_db
+def test_project_detail_sort_by_priority_desc(client: Client) -> None:
+    """Priority descending sort renders higher urgency tasks first."""
+    project = Project.objects.create(name="Sort filter")
+    Task.objects.create(
+        project=project, name="Low task", priority=Priority.LOW, status=TaskStatus.TODO
+    )
+    Task.objects.create(
+        project=project,
+        name="High task",
+        priority=Priority.VERY_HIGH,
+        status=TaskStatus.TODO,
+    )
+
+    response = client.get(f"/projects/{project.pk}/?sort=priority&dir=desc")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert content.index("High task") < content.index("Low task")
+
+
+@pytest.mark.django_db
+def test_project_detail_toolbar_by_date_input(client: Client) -> None:
+    """By-date filter renders the calendar input with the selected value."""
+    project = Project.objects.create(name="By date toolbar")
+
+    response = client.get(f"/projects/{project.pk}/?due=by_date&due_on=2026-07-01")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert 'id="task-due-on-input"' in content
+    assert 'value="2026-07-01"' in content
+    assert "Due: on or before Jul 1, 2026" in content
+
+
+@pytest.mark.django_db
 def test_project_detail_toolbar_default_labels(client: Client) -> None:
     """Default toolbar shows Filter and Sort labels without an active filter badge."""
     project = Project.objects.create(name="Toolbar defaults")
@@ -941,17 +1200,18 @@ def test_project_detail_toolbar_sort_button_label(client: Client) -> None:
 
 
 @pytest.mark.django_db
-def test_project_detail_manual_sort_shows_drag_grip(client: Client) -> None:
-    """Manual sort enables the drag grip placeholder on task rows."""
-    project = Project.objects.create(name="Manual sort")
+def test_project_detail_sort_manual_falls_back_to_default(client: Client) -> None:
+    """Bookmarked manual sort URLs fall back to default due-date sort."""
+    project = Project.objects.create(name="Legacy manual sort")
     Task.objects.create(project=project, name="Reorder me", status=TaskStatus.TODO)
 
     response = client.get(f"/projects/{project.pk}/?sort=manual")
 
     assert response.status_code == 200
     content = response.content.decode()
-    assert 'data-manual-sort="true"' in content
-    assert "cursor-grab" in content
+    assert "Sort: Due date ↑" in content
+    assert 'data-manual-sort' not in content
+    assert "cursor-grab" not in content
 
 
 @pytest.mark.django_db
@@ -1011,7 +1271,8 @@ def test_project_detail_todo_and_in_progress_sections_expandable(client: Client)
     assert 'class="group/section mt-7 rounded-xl bg-orange-50/60' in content
     assert '<details class="group/section mt-7 rounded-xl bg-blue-50/60' in content
     assert '<details class="group/section mt-7 rounded-xl bg-orange-50/60' in content
-    assert ' open>' in content
+    # Expanded sections use the boolean `open` attr (may precede inline style).
+    assert ' open' in content
     assert content.count('group-open/section:rotate-180') >= 2
 
 

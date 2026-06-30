@@ -1,19 +1,24 @@
 """Task queryset helpers for the project detail page.
 
 Loads all tasks for one project and groups them by status for kanban-style
-sections. Uses a single SQL query plus in-memory grouping (see
-docs/scalingConcerns.md).
+sections. Uses a single SQL query plus in-memory grouping.
 """
 
 from collections.abc import Iterable
 from datetime import date
 from typing import Any
 
-from django.db.models import F, Min, Q, QuerySet
+from django.db.models import F, Min, QuerySet
 from django.utils import timezone
 
 from tasks.models import Project, Task, TaskStatus
 from tasks.queries.fuzzy_search import apply_fuzzy_search
+from tasks.queries.soonest_eligible import OPEN_TASK_STATUSES, eligible_soonest_tasks_filter
+from tasks.queries.task_list_filters import (
+    TaskListFilters,
+    apply_task_list_filters,
+    apply_task_list_sort,
+)
 
 # Fixed section order for the project detail template (in progress → cancelled).
 TASK_STATUS_SECTION_ORDER: tuple[TaskStatus, ...] = (
@@ -31,19 +36,18 @@ TASK_STATUS_ADVANCEMENT: tuple[TaskStatus, ...] = (
 )
 
 # Open statuses eligible for the overdue bucket on the project detail page.
-_OPEN_STATUSES: frozenset[TaskStatus] = frozenset(
-    {TaskStatus.TODO, TaskStatus.IN_PROGRESS}
-)
+_OPEN_STATUSES: frozenset[TaskStatus] = frozenset(OPEN_TASK_STATUSES)
 
 
 def refresh_project_soonest_due_date(project: Project) -> None:
-    """Recompute ``Project.soonest_due_date`` from dated tasks under the project.
+    """Recompute ``Project.soonest_due_date`` from open dated tasks under the project.
 
-    Uses the earliest non-null task ``due_date`` (see docs/schema.md). Sets the
-    field to ``None`` when the project has no dated tasks.
+    Uses the earliest ``due_date`` among todo and in-progress tasks (see
+    docs/schema.md). Sets the field to ``None`` when no open dated tasks exist.
     """
     soonest_due_date = (
-        Task.objects.filter(project_id=project.pk, due_date__isnull=False)
+        Task.objects.filter(project_id=project.pk)
+        .filter(eligible_soonest_tasks_filter())
         .aggregate(soonest=Min("due_date"))
         .get("soonest")
     )
@@ -102,7 +106,7 @@ def advance_task_status(task: Task) -> Task:
     """Move a task one step forward along todo → in_progress → done.
 
     Idempotent when the task is already ``done`` or ``cancelled`` (no save).
-    Status-only changes do not refresh ``soonest_due_date``.
+    Refreshes ``soonest_due_date`` when status changes affect open-task eligibility.
     """
     next_status = get_next_task_status(TaskStatus(task.status))
     if next_status is None:
@@ -110,6 +114,7 @@ def advance_task_status(task: Task) -> Task:
 
     task.status = next_status
     task.save(update_fields=["status", "updated_at"])
+    refresh_project_soonest_due_date(task.project)
     return task
 
 
@@ -117,13 +122,14 @@ def reopen_task_to_todo(task: Task) -> Task:
     """Move a done or cancelled task back to ``todo``.
 
     Open statuses (todo, in_progress) are left unchanged (no save).
-    Status-only changes do not refresh ``soonest_due_date``.
+    Refreshes ``soonest_due_date`` when a dated task becomes eligible again.
     """
     if task.status not in (TaskStatus.DONE, TaskStatus.CANCELLED):
         return task
 
     task.status = TaskStatus.TODO
     task.save(update_fields=["status", "updated_at"])
+    refresh_project_soonest_due_date(task.project)
     return task
 
 
@@ -132,20 +138,30 @@ def revert_task_to_todo(task: Task) -> Task:
     return reopen_task_to_todo(task)
 
 
-def get_project_tasks(project_id: int, search: str = "") -> QuerySet[Task]:
-    """Return tasks for a project, optionally filtered by search term.
+def get_project_tasks(
+    project_id: int,
+    search: str = "",
+    *,
+    filters: TaskListFilters | None = None,
+) -> QuerySet[Task]:
+    """Return tasks for a project with optional search, filter, and sort.
 
     Search matches task name, description (fuzzy trigram + substring), or any
-    tag via partial/fuzzy array lookup. Uses task_project_id_idx for project
-    scope. Tasks are sorted by due date (nulls last), then name, then primary
-    key as a stable tiebreaker.
+    tag via partial/fuzzy array lookup. Toolbar filters and sort run after
+    search and before the view groups tasks into status sections.
     """
     queryset = Task.objects.filter(project_id=project_id)
 
-    # Narrow the queryset before ordering when the user typed a search term.
+    # Narrow the queryset before filter/sort when the user typed a search term.
     queryset = apply_fuzzy_search(queryset, search)
 
-    return queryset.order_by(F("due_date").asc(nulls_last=True), "name", "pk")
+    if filters is not None:
+        queryset = apply_task_list_filters(queryset, filters)
+        queryset = apply_task_list_sort(queryset, filters)
+    else:
+        queryset = queryset.order_by(F("due_date").asc(nulls_last=True), "name", "pk")
+
+    return queryset
 
 
 def partition_overdue_tasks(

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load static priority_ui %}
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -14,17 +15,17 @@
     <div class="min-h-screen py-9 px-7 box-border">
 
         <!-- Centered app window — same shell as the other pages. -->
-        <div class="w-full max-w-[1120px] mx-auto rounded-[18px] overflow-hidden border border-slate-200 dark:border-slate-700 shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
+        <div class="w-full max-w-[1120px] mx-auto rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
 
             <!-- Top bar — app name links home; theme toggle persists via localStorage. -->
-            <header class="h-[52px] flex items-center justify-between px-6 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
+            <header class="h-[52px] flex items-center justify-between px-6 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 rounded-t-[18px]">
                 <a href="{% url 'home' %}" class="text-[14px] font-bold text-slate-900 dark:text-slate-100 tracking-[-0.015em] hover:text-slate-500 dark:hover:text-slate-400">Ultra Super Project Task Manager+</a>
 
                 {% include "includes/theme_header_toggle.html" %}
             </header>
 
             <!-- Body — muted panel background like the home page content area. -->
-            <div class="p-[30px_28px_38px] bg-slate-50 dark:bg-slate-900">
+            <div class="p-[30px_28px_38px] bg-slate-50 dark:bg-slate-900 rounded-b-[18px]">
 
                 <div class="w-full max-w-[780px] mx-auto">
 
@@ -38,7 +39,7 @@
                     </a>
 
                     <!-- ===================== PROJECT HEADER CARD ====================== -->
-                    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[16px] p-[24px_26px] shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_18px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_6px_18px_rgba(0,0,0,0.25)]">
+                    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[16px] p-[24px_26px] shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_18px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_6px_18px_rgba(0,0,0,0.25)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-md">
 
                         <!-- Tag badges (left) + priority badge (right). -->
                         <div class="flex justify-between items-start gap-3 mb-[14px]">
@@ -54,18 +55,15 @@
                                 <a href="{% url 'project_edit' project.pk %}"
                                    aria-label="Edit project"
                                    title="Edit project"
-                                   class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400">
+                                   class="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 transition-[transform,box-shadow,border-color,background-color] duration-200 active:scale-[0.98]">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                     </svg>
                                 </a>
 
-                                <!-- Priority: high/very_high → red, medium → amber, else slate. -->
-                                <span class="inline-flex items-center gap-[5px] text-[10.5px] font-bold px-[9px] py-[3px] rounded-[7px] whitespace-nowrap
-                                    {% if project.priority == 'high' or project.priority == 'very_high' %}bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300
-                                    {% elif project.priority == 'medium' %}bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300
-                                    {% else %}bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300{% endif %}">
+                                {% priority_ui project.priority as prio %}
+                                <span class="inline-flex items-center gap-[5px] text-[10.5px] font-bold px-[9px] py-[3px] rounded-[7px] whitespace-nowrap {{ prio.badge_classes }}">
                                     <span class="w-1.5 h-1.5 rounded-full bg-current"></span>{{ project.get_priority_display }}
                                 </span>
                             </div>
@@ -83,12 +81,15 @@
                         {% endcomment %}
                         <div class="flex gap-9 mt-[18px] flex-wrap">
                             <div>
-                                <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">Progress</div>
+                                <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">{% if stats_are_filtered %}Filtered progress{% else %}Progress{% endif %}</div>
                                 <div class="mt-[3px] text-[19px] font-extrabold text-green-600 dark:text-green-400">{{ progress }}%</div>
                             </div>
                             <div>
-                                <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">Tasks done</div>
+                                <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">{% if stats_are_filtered %}Tasks shown{% else %}Tasks done{% endif %}</div>
                                 <div class="mt-[3px] text-[19px] font-extrabold text-slate-900 dark:text-slate-100">{{ done_count }}/{{ task_count }}</div>
+                                {% if stats_are_filtered %}
+                                <div class="mt-0.5 text-[11px] font-medium text-slate-400 dark:text-slate-500">of {{ total_task_count }} total</div>
+                                {% endif %}
                             </div>
                             <div>
                                 <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.04em]">Due</div>
@@ -102,7 +103,7 @@
 
                         <!-- Progress bar. -->
                         <div class="mt-[18px] h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-600 rounded-full w-[{{ progress }}%]"></div>
+                            <div class="h-full bg-green-600 rounded-full transition-[width] duration-500 ease-out w-[{{ progress }}%]"></div>
                         </div>
                     </div>
                     <!-- =================== END PROJECT HEADER CARD ==================== -->
@@ -112,15 +113,14 @@
 
                     {% include "projects/_task_toolbar.html" %}
 
-                    <div id="task-list"
-                         data-manual-sort="{% if task_list_ui.is_manual_sort %}true{% else %}false{% endif %}">
+                    <div id="task-list">
 
                     {% comment %}
                     Overdue group — open tasks past their due date (provided separately
                     by the view). Shown above the status groups and flagged in red.
                     {% endcomment %}
                     {% if overdue_tasks %}
-                    <div class="mt-7 rounded-xl bg-red-50/60 dark:bg-red-950/20 p-3">
+                    <div class="mt-7 rounded-xl bg-red-50/60 dark:bg-red-950/20 p-3 animate-fade-in">
                         <div class="flex items-center gap-2 mb-3">
                             <span class="w-[9px] h-[9px] rounded-full bg-red-600"></span>
                             <span class="text-xs font-extrabold uppercase tracking-[0.05em] text-red-700 dark:text-red-400">Overdue</span>
@@ -128,7 +128,7 @@
                         </div>
                         <div class="flex flex-col gap-2.5">
                             {% for task in overdue_tasks %}
-                                {% include "projects/_task_row.html" with project=project is_manual_sort=task_list_ui.is_manual_sort is_overdue=True %}
+                                {% include "projects/_task_row.html" with project=project is_overdue=True %}
                             {% endfor %}
                         </div>
                     </div>
@@ -142,24 +142,24 @@
                     {% for section in task_sections %}
                     {% if section.tasks %}
                         {% if section.status == 'done' or section.status == 'cancelled' %}
-                            {% include "projects/_task_status_section.html" with section=section project=project task_list_ui=task_list_ui collapsed=True %}
+                            {% include "projects/_task_status_section.html" with section=section project=project task_list_ui=task_list_ui collapsed=True section_index=forloop.counter0 %}
                         {% else %}
-                            {% include "projects/_task_status_section.html" with section=section project=project task_list_ui=task_list_ui collapsed=False %}
+                            {% include "projects/_task_status_section.html" with section=section project=project task_list_ui=task_list_ui collapsed=False section_index=forloop.counter0 %}
                         {% endif %}
                     {% endif %}
                     {% endfor %}
 
-                    <!-- Empty state when there are no tasks, or search returned no matches. -->
+                    <!-- Empty state when there are no tasks, or filters/search returned no matches. -->
                     {% if task_count == 0 and not overdue_tasks %}
-                    <div class="mt-[22px] bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-[15px] p-10 text-center">
-                        {% if request.GET.q %}
-                        <p class="text-[15px] font-semibold text-slate-900 dark:text-slate-100">No tasks match your search</p>
-                        <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Try a different term or clear the search box.</p>
+                    <div class="mt-[22px] bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-[15px] p-10 text-center animate-fade-up">
+                        {% if task_list_ui.search or task_list_ui.active_filter_count %}
+                        <p class="text-[15px] font-semibold text-slate-900 dark:text-slate-100">No tasks match your filters</p>
+                        <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Try different search terms or clear active filters.</p>
                         {% else %}
                         <p class="text-[15px] font-semibold text-slate-900 dark:text-slate-100">No tasks yet</p>
                         <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Add the first task to start tracking progress.</p>
                         <a href="{% url 'task_create' project.pk %}"
-                           class="inline-flex items-center gap-2 mt-4 bg-green-600 hover:bg-green-700 text-white rounded-[11px] h-[42px] px-5 font-bold text-[13.5px]">
+                           class="inline-flex items-center gap-2 mt-4 bg-green-600 hover:bg-green-700 text-white rounded-[11px] h-[42px] px-5 font-bold text-[13.5px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_6px_14px_rgba(22,163,74,.2)] hover:shadow-[0_4px_8px_rgba(22,163,74,.3),0_10px_20px_rgba(22,163,74,.25)] transition-[box-shadow,background-color] duration-200 active:scale-[0.98]">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
                                 <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
                             </svg>
@@ -177,8 +177,6 @@
     </div>
 
     {% include "includes/theme_toggle.html" %}
-    <script>
-    {% include "includes/project_detail_toolbar.js" %}
-    </script>
+    <script src="{% static 'js/list_toolbar.js' %}" defer data-toolbar-prefix="task"></script>
 </body>
 </html>

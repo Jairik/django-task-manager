@@ -8,7 +8,7 @@ progress) pass collapsed=False so they render expanded (`open`) by default.
 {% load task_status_ui %}
 {% status_ui section.status as ui %}
 
-<details class="group/section mt-7 rounded-xl {{ ui.section_bg_classes }} p-3"{% if not collapsed %} open{% endif %}>
+<details class="group/section mt-7 rounded-xl {{ ui.section_bg_classes }} p-3 animate-fade-in"{% if not collapsed %} open{% endif %}{% if section_index < 4 %} style="animation-delay: {{ section_index }}00ms"{% endif %}>
     <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer mb-0 group-open/section:mb-3">
         <div class="flex items-center gap-2">
             <svg class="shrink-0 transition-transform group-open/section:rotate-180 text-slate-400 dark:text-slate-500" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -22,7 +22,7 @@ progress) pass collapsed=False so they render expanded (`open`) by default.
     </summary>
     <div class="flex flex-col gap-2.5">
         {% for task in section.tasks %}
-            {% include "projects/_task_row.html" with project=project is_manual_sort=task_list_ui.is_manual_sort %}
+            {% include "projects/_task_row.html" with project=project %}
         {% endfor %}
     </div>
 </details>

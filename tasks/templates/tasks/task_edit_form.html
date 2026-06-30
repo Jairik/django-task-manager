@@ -38,7 +38,7 @@
                     </a>
 
                     <!-- Form card — header / body / footer sections mirror the create page. -->
-                    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[16px] overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_18px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_6px_18px_rgba(0,0,0,0.25)]">
+                    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[16px] overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_18px_rgba(15,23,42,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_6px_18px_rgba(0,0,0,0.25)] animate-fade-up">
 
                         <!-- Card header: title + project context and current status. -->
                         <div class="p-[24px_28px_20px] border-b border-slate-100 dark:border-slate-700">
@@ -83,7 +83,7 @@
                                   onsubmit="return confirm('Delete this task?');">
                                 {% csrf_token %}
                                 <button type="submit"
-                                        class="inline-flex items-center gap-[7px] h-[46px] px-5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-300 dark:border-red-500/30 rounded-[11px] font-bold text-[14px]">
+                                        class="inline-flex items-center gap-[7px] h-[46px] px-5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-300 dark:border-red-500/30 rounded-[11px] font-bold text-[14px] transition-transform duration-150 active:scale-[0.98]">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="3 6 5 6 21 6"></polyline>
                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -94,11 +94,11 @@
 
                             <div class="flex gap-2.5">
                                 <a href="{% url 'project_detail' project.pk %}"
-                                   class="inline-flex items-center h-[46px] px-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-[11px] font-bold text-[14px]">
+                                   class="inline-flex items-center h-[46px] px-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-[11px] font-bold text-[14px] transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]">
                                     Cancel
                                 </a>
                                 <button type="submit" form="task-edit-form"
-                                        class="inline-flex items-center gap-[7px] h-[46px] px-[22px] bg-green-600 hover:bg-green-700 text-white rounded-[11px] font-bold text-[14px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_6px_14px_rgba(22,163,74,.2)]">
+                                        class="inline-flex items-center gap-[7px] h-[46px] px-[22px] bg-green-600 hover:bg-green-700 text-white rounded-[11px] font-bold text-[14px] shadow-[0_2px_4px_rgba(22,163,74,.25),0_6px_14px_rgba(22,163,74,.2)] transition-transform duration-150 active:scale-[0.98]">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="20 6 9 17 4 12"></polyline>
                                     </svg>

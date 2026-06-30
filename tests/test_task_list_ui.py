@@ -1,5 +1,7 @@
 """Unit tests for project-detail task toolbar URL param parsing."""
 
+from datetime import date
+
 from django.http import QueryDict
 
 from tasks.models import Priority
@@ -13,12 +15,12 @@ def test_parse_task_list_params_defaults() -> None:
     assert state.search == ""
     assert state.selected_priorities == ()
     assert state.due_filter == "any"
+    assert state.due_on is None
     assert state.sort_by == "due_date"
     assert state.sort_dir == "asc"
     assert state.active_filter_count == 0
     assert state.filter_chips == ()
     assert state.sort_button_label == "Sort: Due date ↑"
-    assert state.is_manual_sort is False
     assert state.query_string == ""
 
 
@@ -43,16 +45,15 @@ def test_parse_task_list_params_sort_label_descending() -> None:
     assert state.sort_by == "priority"
     assert state.sort_dir == "desc"
     assert state.sort_button_label == "Sort: Priority ↓"
-    assert state.is_manual_sort is False
 
 
-def test_parse_task_list_params_manual_sort() -> None:
-    """Manual sort sets the flag used for future drag reorder."""
+def test_parse_task_list_params_manual_sort_falls_back_to_default() -> None:
+    """Removed manual sort param falls back to default due_date ascending."""
     state = parse_task_list_params({"sort": "manual"})
 
-    assert state.sort_by == "manual"
-    assert state.is_manual_sort is True
-    assert "sort=manual" in state.query_string
+    assert state.sort_by == "due_date"
+    assert state.sort_dir == "asc"
+    assert state.query_string == ""
 
 
 def test_parse_task_list_params_ignores_invalid_values() -> None:
@@ -66,6 +67,15 @@ def test_parse_task_list_params_ignores_invalid_values() -> None:
     assert state.sort_dir == "asc"
 
 
+def test_parse_task_list_params_multiple_repeated_priority_keys() -> None:
+    """Checkbox GET submissions repeat the priority key for each selection."""
+    query = QueryDict("priority=high&priority=low")
+    state = parse_task_list_params(query)
+
+    assert state.selected_priorities == ("high", "low")
+    assert state.active_filter_count == 2
+
+
 def test_parse_task_list_params_search_and_query_string() -> None:
     """Search term is normalized and included in the serialized query string."""
     state = parse_task_list_params({"q": "  docs  ", "priority": "high"})
@@ -73,3 +83,23 @@ def test_parse_task_list_params_search_and_query_string() -> None:
     assert state.search == "docs"
     assert "q=docs" in state.query_string
     assert "priority=high" in state.query_string
+
+
+def test_parse_task_list_params_by_date_and_due_on() -> None:
+    """By-date filter parses the calendar param and serializes both GET keys."""
+    state = parse_task_list_params({"due": "by_date", "due_on": "2026-07-01"})
+
+    assert state.due_filter == "by_date"
+    assert state.due_on == date(2026, 7, 1)
+    assert "due=by_date" in state.query_string
+    assert "due_on=2026-07-01" in state.query_string
+    assert state.filter_chips[0].label == "Due: on or before Jul 1, 2026"
+
+
+def test_parse_task_list_params_ignores_invalid_due_on() -> None:
+    """Malformed due_on values are ignored without breaking other params."""
+    state = parse_task_list_params({"due": "by_date", "due_on": "not-a-date"})
+
+    assert state.due_filter == "by_date"
+    assert state.due_on is None
+    assert state.filter_chips[0].label == "Due: By date"

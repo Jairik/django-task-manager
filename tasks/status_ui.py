@@ -74,7 +74,8 @@ _STATUS_UI_MAP: dict[TaskStatus, StatusUI] = {
         icon_markup=_ICON_TODO,
         action_hint="Start",
         action_hover_classes=(
-            "hover:border-blue-300 dark:hover:border-blue-600 "
+            "hover:ring-2 hover:ring-blue-500/55 hover:border-blue-400 "
+            "dark:hover:ring-blue-500/40 dark:hover:border-blue-500 "
             "hover:bg-blue-50 dark:hover:bg-blue-950/30"
         ),
     ),
@@ -97,7 +98,8 @@ _STATUS_UI_MAP: dict[TaskStatus, StatusUI] = {
         icon_markup=_ICON_IN_PROGRESS,
         action_hint="Complete",
         action_hover_classes=(
-            "hover:border-orange-300 dark:hover:border-orange-600 "
+            "hover:ring-2 hover:ring-orange-500/55 hover:border-orange-400 "
+            "dark:hover:ring-orange-500/40 dark:hover:border-orange-500 "
             "hover:bg-orange-50 dark:hover:bg-orange-950/30"
         ),
     ),
@@ -118,8 +120,9 @@ _STATUS_UI_MAP: dict[TaskStatus, StatusUI] = {
         icon_markup=_ICON_DONE,
         action_hint="Reopen",
         action_hover_classes=(
-            "hover:border-slate-300 dark:hover:border-slate-600 "
-            "hover:bg-slate-50 dark:hover:bg-slate-900"
+            "hover:ring-2 hover:ring-green-500/55 hover:border-green-400 "
+            "dark:hover:ring-green-500/40 dark:hover:border-green-500 "
+            "hover:bg-green-50 dark:hover:bg-green-950/30"
         ),
     ),
     TaskStatus.CANCELLED: StatusUI(
@@ -139,7 +142,8 @@ _STATUS_UI_MAP: dict[TaskStatus, StatusUI] = {
         icon_markup=_ICON_CANCELLED,
         action_hint="Restore",
         action_hover_classes=(
-            "hover:border-slate-300 dark:hover:border-slate-600 "
+            "hover:ring-2 hover:ring-slate-400/55 hover:border-slate-400 "
+            "dark:hover:ring-slate-500/40 dark:hover:border-slate-500 "
             "hover:bg-slate-50 dark:hover:bg-slate-900"
         ),
     ),

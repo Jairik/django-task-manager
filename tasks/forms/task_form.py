@@ -1,27 +1,11 @@
 """Form for creating and editing tasks."""
 
-from django import forms
-
-from tasks.limits import MAX_DESCRIPTION_LENGTH, MAX_TAG_LENGTH
+from tasks.forms.tagged_description_mixin import TaggedDescriptionFormMixin
 from tasks.models import Task
 
 
-class TaskForm(forms.ModelForm):
+class TaskForm(TaggedDescriptionFormMixin):
     """Validate task fields and map up to three tag inputs to the tags array."""
-
-    # Bounded CharField overrides the model TextField for web-form validation.
-    description = forms.CharField(
-        max_length=MAX_DESCRIPTION_LENGTH,
-        required=False,
-        widget=forms.Textarea(
-            attrs={"rows": 3, "maxlength": MAX_DESCRIPTION_LENGTH},
-        ),
-    )
-
-    # Tags live on the model as an ArrayField; the template groups them under one "tags" label.
-    tag_1 = forms.CharField(max_length=MAX_TAG_LENGTH, required=False, label="")
-    tag_2 = forms.CharField(max_length=MAX_TAG_LENGTH, required=False, label="")
-    tag_3 = forms.CharField(max_length=MAX_TAG_LENGTH, required=False, label="")
 
     class Meta:
         model = Task
@@ -32,24 +16,9 @@ class TaskForm(forms.ModelForm):
         """Pre-fill tag inputs when editing; hide status on the create form."""
         super().__init__(*args, **kwargs)
 
-        if self.instance.pk:
-            existing_tags = self.instance.tags or []
-            for index, value in enumerate(existing_tags[:3], start=1):
-                self.fields[f"tag_{index}"].initial = value
-        else:
+        if not self.instance.pk:
             # Create flow omits status — the model default ("todo") applies on save.
             del self.fields["status"]
-
-    def _collect_tags(self) -> list[str]:
-        """Return non-empty tag values from the three tag fields."""
-        tags: list[str] = []
-
-        for field_name in ("tag_1", "tag_2", "tag_3"):
-            value = self.cleaned_data.get(field_name, "").strip()
-            if value:
-                tags.append(value)
-
-        return tags
 
     def save(self, commit: bool = True) -> Task:
         """Persist the task row and its tag array.
@@ -57,10 +26,4 @@ class TaskForm(forms.ModelForm):
         The caller is responsible for setting ``task.project`` before a commit,
         so callers that pass ``commit=False`` can attach the parent project.
         """
-        task = super().save(commit=False)
-        task.tags = self._collect_tags()
-
-        if commit:
-            task.save()
-
-        return task
+        return super().save(commit=commit)

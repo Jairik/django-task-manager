@@ -9,7 +9,7 @@ light mode (and goes flat in dark), the dark button does the reverse via `dark:`
 
 <div class="flex items-center gap-[3px] bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[9px] p-[3px]">
     <button type="button" id="theme-light" aria-label="Light theme" aria-pressed="true"
-            class="flex items-center justify-center w-7 h-[23px] rounded-md bg-white shadow-[0_1px_2px_rgba(15,23,42,0.12)] dark:bg-transparent dark:shadow-none">
+            class="flex items-center justify-center w-7 h-[23px] rounded-md bg-white shadow-[0_1px_2px_rgba(15,23,42,0.12)] dark:bg-transparent dark:shadow-none transition-[background-color,box-shadow] duration-200">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="12" r="4"></circle>
             <line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line>
@@ -19,7 +19,7 @@ light mode (and goes flat in dark), the dark button does the reverse via `dark:`
         </svg>
     </button>
     <button type="button" id="theme-dark" aria-label="Dark theme" aria-pressed="false"
-            class="flex items-center justify-center w-7 h-[23px] rounded-md bg-transparent shadow-none dark:bg-slate-700 dark:shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+            class="flex items-center justify-center w-7 h-[23px] rounded-md bg-transparent shadow-none dark:bg-slate-700 dark:shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-[background-color,box-shadow] duration-200">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="#94a3b8">
             <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path>
         </svg>

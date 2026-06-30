@@ -86,4 +86,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Root-level assets (e.g. static/js/home_toolbar.js) live outside app packages.
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
